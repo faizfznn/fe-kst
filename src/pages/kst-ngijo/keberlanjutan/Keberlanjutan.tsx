@@ -264,9 +264,7 @@ export default function Keberlanjutan() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
-              <Leaf className="size-4" />
-            </div>
+            <Leaf className="size-5 text-gray-500" />
             <div>
               <p className="text-[13px] font-bold text-gray-900">
                 Green Performance
@@ -292,9 +290,7 @@ export default function Keberlanjutan() {
 
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-              <Droplets className="size-4" />
-            </div>
+            <Droplets className="size-5 text-gray-500" />
             <div>
               <p className="text-[13px] font-bold text-gray-900">
                 Siklus Hidup Air
@@ -335,11 +331,11 @@ export default function Keberlanjutan() {
             <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
               <span className="flex items-center gap-1">
                 <span className="size-2 rounded-full bg-emerald-500 inline-block" />
-              Daur ulang - {recycledWater.toLocaleString("id-ID")} Gal
+                Daur ulang - {recycledWater.toLocaleString("id-ID")} Gal
               </span>
               <span className="flex items-center gap-1">
                 <span className="size-2 rounded-full bg-blue-500 inline-block" />
-              Sumber Segar - {freshWater.toLocaleString("id-ID")} Gal
+                Sumber Segar - {freshWater.toLocaleString("id-ID")} Gal
               </span>
             </div>
           </div>
@@ -352,9 +348,7 @@ export default function Keberlanjutan() {
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
-                <Trash2 className="size-4" />
-              </div>
+              <Trash2 className="size-5 text-gray-500" />
               <div>
                 <p className="text-[13px] font-bold text-gray-900">
                   Metrik Limbah
@@ -420,9 +414,7 @@ export default function Keberlanjutan() {
         <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-                <Zap className="size-4" />
-              </div>
+              <Zap className="size-5 text-gray-500" />
               <div>
                 <p className="text-[13px] font-bold text-gray-900">
                   Dinamika Energi
@@ -498,9 +490,7 @@ export default function Keberlanjutan() {
 
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
-              <Zap className="size-4" />
-            </div>
+            <Zap className="size-5 text-gray-500" />
             <div>
               <p className="text-[13px] font-bold text-gray-900 leading-tight">
                 Total Energi Terbarukan yang Dihasilkan
@@ -530,7 +520,7 @@ export default function Keberlanjutan() {
                   className={cn(
                     "size-2.5 rounded-full shrink-0",
                     ["bg-blue-500", "bg-emerald-500", "bg-amber-500"][index] ??
-                      "bg-gray-400",
+                    "bg-gray-400",
                   )}
                 />
                 <span>{item.label}</span>
@@ -648,8 +638,8 @@ export default function Keberlanjutan() {
                         row.tren === "up"
                           ? "text-emerald-500"
                           : row.tren === "down"
-                          ? "text-red-400 rotate-180"
-                          : "text-gray-400"
+                            ? "text-red-400 rotate-180"
+                            : "text-gray-400"
                       )}
                     />
                   </TableCell>
