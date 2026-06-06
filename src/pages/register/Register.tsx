@@ -149,7 +149,7 @@ export default function Register() {
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-green-600 mb-2">
-                DAFTAR AKUN KST
+                Daftar Akun KST
               </h2>
               <p className="text-gray-600">
                 Buat akun untuk mulai menggunakan dashboard KST
