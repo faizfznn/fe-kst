@@ -32,7 +32,6 @@ import { useApiData, usePageData } from "@/api/hooks";
 
 interface SummaryCardData {
   icon: React.ElementType;
-  iconBg: string;
   title: string;
   value: string;
   trend: number;
@@ -54,7 +53,6 @@ interface InovasiRow {
 const summaryCards: SummaryCardData[] = [
   {
     icon: Activity,
-    iconBg: "bg-emerald-50 text-emerald-600",
     title: "Total Penelitian & Inovasi Aktif",
     value: "42",
     trend: 12.5,
@@ -63,7 +61,6 @@ const summaryCards: SummaryCardData[] = [
   },
   {
     icon: BarChart3,
-    iconBg: "bg-blue-50 text-blue-600",
     title: "Rata-rata Skor TRL",
     value: "5.4",
     trend: -20,
@@ -72,7 +69,6 @@ const summaryCards: SummaryCardData[] = [
   },
   {
     icon: Shield,
-    iconBg: "bg-amber-50 text-amber-600",
     title: "Paten Tertunda",
     value: "8",
     trend: 12.5,
@@ -81,7 +77,6 @@ const summaryCards: SummaryCardData[] = [
   },
   {
     icon: Users,
-    iconBg: "bg-rose-50 text-rose-600",
     title: "Kolaborasi",
     value: "156",
     trend: 12.5,
@@ -200,9 +195,7 @@ function SummaryCard({ data }: { data: SummaryCardData }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow duration-200">
       <div className="flex items-center gap-2.5">
-        <div className={cn("p-1.5 rounded-lg", data.iconBg)}>
-          <Icon className="size-4" />
-        </div>
+        <Icon className="size-5 text-gray-500" />
 
         <span className="text-[12px] font-semibold text-gray-600 leading-tight">
           {data.title}
