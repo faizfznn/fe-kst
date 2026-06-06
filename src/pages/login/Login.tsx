@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import banner from "@/assets/logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,17 +37,18 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Section - Logo/Image */}
+      {/* Left Section - Branding KST */}
       <div className="hidden lg:flex lg:w-1/2 bg-blue-50 items-center justify-center p-8">
-        <div className="text-center">
-          <div className="w-64 h-64 bg-gray-300 rounded-lg flex items-center justify-center mb-8">
-            {/* Placeholder untuk image */}
-            <span className="text-gray-500 text-lg">Logo</span>
+        <div className="text-center max-w-lg">
+          <div className="w-64 h-64 rounded-2xl bg-white/70 shadow-sm flex items-center justify-center mb-8 mx-auto overflow-hidden">
+            <img src={banner} alt="KST DIKST" className="object-cover" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-4">
-            Welcome back
+            Selamat datang kembali di KST
           </h1>
-          <p className="text-gray-600">Sign in to your account to continue</p>
+          <p className="text-gray-600">
+            Masuk ke akun Anda untuk melanjutkan ke dashboard KST
+          </p>
         </div>
       </div>
 
@@ -57,10 +59,10 @@ export default function Login() {
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-green-600 mb-2">
-                SIGN IN
+                MASUK AKUN KST
               </h2>
               <p className="text-gray-600">
-                Login to your account to access the dashboard
+                Masuk ke akun Anda untuk mengakses dashboard KST
               </p>
             </div>
 
@@ -76,12 +78,12 @@ export default function Login() {
               {/* Email Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email*
+                  Email KST*
                 </label>
                 <Input
                   type="email"
                   name="email"
-                  placeholder="Enter your email"
+                  placeholder="Masukkan email KST"
                   value={formData.email}
                   onChange={handleChange}
                   required
@@ -94,20 +96,20 @@ export default function Login() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Password*
+                    Kata sandi*
                   </label>
                   <Link
                     to="/forgot-password"
                     className="text-xs text-gray-600 hover:text-gray-900 underline"
                   >
-                    Forgot your password?
+                    Lupa kata sandi?
                   </Link>
                 </div>
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="Enter your password"
+                    placeholder="Masukkan kata sandi"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -133,29 +135,22 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full bg-black text-white hover:bg-gray-800 mt-6"
-                disabled={isLoading}
+                disabled={isLoading || !formData.email.trim() || !formData.password.trim()}
               >
-                {isLoading ? "Logging in..." : "Log in"}
+                {isLoading ? "Sedang masuk..." : "Masuk"}
               </Button>
             </form>
 
             {/* Register Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-700">
-                Don't have an account?{" "}
+                Belum punya akun?{" "}
                 <Link
                   to="/register"
                   className="text-gray-900 hover:underline font-medium"
                 >
-                  Register
+                  Daftar
                 </Link>
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                © 2024 Your Company
               </p>
             </div>
           </div>

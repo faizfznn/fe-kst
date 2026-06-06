@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import banner from "@/assets/logo.png";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -99,7 +100,10 @@ export default function Register() {
         requestedRole: formData.requestedRole as "manajemen" | "operator",
         requestedKstIdentifier:
           formData.requestedRole === "operator"
-            ? (formData.requestedKstIdentifier as "ngijo" | "cangar" | "jatikerto")
+            ? (formData.requestedKstIdentifier as
+              | "ngijo"
+              | "cangar"
+              | "jatikerto")
             : null,
       });
       setSuccessMessage(
@@ -114,18 +118,19 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Section - Logo/Image */}
+      {/* Left Section - Branding KST */}
       <div className="hidden lg:flex lg:w-1/2 bg-blue-50 items-center justify-center p-8">
-        <div className="text-center">
-          <div className="w-64 h-64 bg-gray-300 rounded-lg flex items-center justify-center mb-8">
-            {/* Placeholder untuk image */}
-            <span className="text-gray-500 text-lg">Logo</span>
+        <div className="flex flex-col items-center max-w-lg text-center">
+          <div className="w-64 h-64 bg-white/70 shadow-sm rounded-2xl flex items-center justify-center mb-8 overflow-hidden">
+            <div className="w-64 h-64 rounded-2xl bg-white/70 shadow-sm flex items-center justify-center mb-8 mx-auto overflow-hidden">
+              <img src={banner} alt="KST DIKST" className="object-cover" />
+            </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-4">
-            Join us today
+            Bergabung dengan KST
           </h1>
           <p className="text-gray-600">
-            Create an account and start your journey
+            Buat akun untuk memulai akses ke sistem KST
           </p>
         </div>
       </div>
@@ -137,16 +142,18 @@ export default function Register() {
             {/* Logo Mobile */}
             <div className="lg:hidden mb-8">
               <div className="w-12 h-12 bg-gray-300 rounded-lg flex items-center justify-center mx-auto mb-6">
-                <span className="text-gray-500 text-xs">Logo</span>
+                <span className="text-gray-500 text-xs">KST</span>
               </div>
             </div>
 
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-green-600 mb-2">
-                SIGN UP
+                DAFTAR AKUN KST
               </h2>
-              <p className="text-gray-600">Create an account to get started</p>
+              <p className="text-gray-600">
+                Buat akun untuk mulai menggunakan dashboard KST
+              </p>
             </div>
 
             {/* Error Message */}
@@ -166,12 +173,12 @@ export default function Register() {
               {/* Name Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name*
+                  Nama Lengkap*
                 </label>
                 <Input
                   type="text"
                   name="name"
-                  placeholder="Enter your full name"
+                  placeholder="Masukkan nama lengkap"
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full"
@@ -186,7 +193,7 @@ export default function Register() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username*
+                  Username KST*
                 </label>
                 <Input
                   type="text"
@@ -207,12 +214,12 @@ export default function Register() {
               {/* Email Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email*
+                  Email KST*
                 </label>
                 <Input
                   type="email"
                   name="email"
-                  placeholder="Enter your email"
+                  placeholder="Masukkan email KST"
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full"
@@ -227,7 +234,7 @@ export default function Register() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Role yang diajukan*
+                  Peran yang diajukan*
                 </label>
                 <Select
                   value={formData.requestedRole}
@@ -281,13 +288,13 @@ export default function Register() {
               {/* Password Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password*
+                  Kata sandi*
                 </label>
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="Enter your password"
+                    placeholder="Masukkan kata sandi"
                     value={formData.password}
                     onChange={handleChange}
                     className="w-full pr-10"
@@ -316,13 +323,13 @@ export default function Register() {
               {/* Confirm Password Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password*
+                  Konfirmasi kata sandi*
                 </label>
                 <div className="relative">
                   <Input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
-                    placeholder="Confirm your password"
+                    placeholder="Konfirmasi kata sandi"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     className="w-full pr-10"
@@ -354,27 +361,20 @@ export default function Register() {
                 className="w-full bg-black text-white hover:bg-gray-800 mt-6"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Sign up"}
+                {isLoading ? "Sedang membuat akun..." : "Daftar"}
               </Button>
             </form>
 
             {/* Login Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-700">
-                Already have an account?{" "}
+                Sudah punya akun?{" "}
                 <Link
                   to="/login"
                   className="text-gray-900 hover:underline font-medium"
                 >
-                  Log in
+                  Masuk
                 </Link>
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                © 2024 Your Company
               </p>
             </div>
           </div>
