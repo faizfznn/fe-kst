@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { usePageData } from "@/api/hooks";
+import { getJatikertoDataMessage } from "../dataState";
+import { numberValue, rowIdentity, textValue, type JatikertoApiRow } from "../rowMappers";
 
-interface KonservasiRow {
+interface KonservasiRow extends JatikertoApiRow {
   id?: string;
-  no: number;
+  no?: number;
   namaKomoditas: string;
   foto: string;
   jumlah: number;
@@ -155,6 +157,36 @@ export const tumbuhanData: KonservasiRow[] = [
 
 const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
 
+function getRowKey(row: KonservasiRow, category: KonservasiCategory, index: number) {
+  return rowIdentity(row) ?? `${category}-${row.namaKomoditas}-${index}`;
+}
+
+function mapKonservasiRow(row: KonservasiRow, category: KonservasiCategory): KonservasiRow {
+  if (!row.colValues) return row;
+
+  if (category === "konservasi-hewan") {
+    return {
+      ...row,
+      id: row.rowId ?? row.id,
+      namaKomoditas: textValue(row, 0),
+      foto: textValue(row, 1),
+      jumlah: numberValue(row, 2),
+      satuan: textValue(row, 3),
+      keterangan: textValue(row, 4, "-"),
+    };
+  }
+
+  return {
+    ...row,
+    id: row.rowId ?? row.id,
+    namaKomoditas: textValue(row, 0),
+    foto: row.foto ?? "",
+    jumlah: numberValue(row, 4),
+    satuan: textValue(row, 5),
+    keterangan: textValue(row, 6, "-"),
+  };
+}
+
 export default function Konservasi() {
   const [selectedYear, setSelectedYear] = useState("2026");
   const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
@@ -162,10 +194,18 @@ export default function Konservasi() {
   const [rowsPerPage, setRowsPerPage] = useState("5");
   const [selectedCategory, setSelectedCategory] =
     useState<KonservasiCategory>("konservasi-hewan");
-  const { items: activeData } = usePageData<KonservasiRow>("/kst/jatikerto/konservasi", {
+  const konservasiEndpoint =
+    selectedCategory === "konservasi-hewan"
+      ? "/kst/jatikerto/data/konservasi/hewan"
+      : "/kst/jatikerto/data/konservasi/tanaman";
+  const {
+    items: activeData,
+    isLoading,
+    error,
+    errorStatus,
+  } = usePageData<KonservasiRow>(konservasiEndpoint, {
     year: selectedYear,
     month: selectedMonth,
-    view: selectedCategory,
     limit: 50,
   });
 
@@ -179,7 +219,13 @@ export default function Konservasi() {
   const paginatedData = activeData.slice(
     (currentPage - 1) * rowsPerPageNumber,
     currentPage * rowsPerPageNumber
-  );
+  ).map((row) => mapKonservasiRow(row, selectedCategory));
+  const tableMessage = getJatikertoDataMessage({
+    isLoading,
+    error,
+    errorStatus,
+    hasItems: activeData.length > 0,
+  });
 
   const handleChangeCategory = (value: KonservasiCategory) => {
     setSelectedCategory(value);
@@ -281,9 +327,19 @@ export default function Konservasi() {
             </TableHeader>
 
             <TableBody>
-              {paginatedData.map((row, index) => (
+              {tableMessage ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="h-32 text-center text-[13px] text-gray-400 font-medium"
+                  >
+                    {tableMessage}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((row, index) => (
                 <TableRow
-                  key={row.id ?? `${selectedCategory}-${row.no}`}
+                  key={getRowKey(row, selectedCategory, index)}
                   className="hover:bg-gray-50/50 group"
                 >
                   <TableCell className="text-[13px] text-gray-500 font-medium pl-5">
@@ -322,7 +378,8 @@ export default function Konservasi() {
                     </button>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

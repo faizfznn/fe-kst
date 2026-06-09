@@ -67,19 +67,82 @@ export const AppRoutes = () => {
             />
 
             {/* KST CANGAR */}
-            <Route path={ROUTES.BOOKLIST_ATP.substring(1)} element={<BooklistAtp />} />
-            <Route path={ROUTES.STOK_OPNAME.substring(1)} element={<StokOpname />} />
+            <Route
+              path={ROUTES.BOOKLIST_ATP.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="cangar">
+                  <BooklistAtp />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.STOK_OPNAME.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="cangar">
+                  <StokOpname />
+                </ProtectedRoute>
+              }
+            />
 
             {/* KST JATIKERTO */}
-            <Route path={ROUTES.KEMITRAAN.substring(1)} element={<Kemitraan />} />
-            <Route path={ROUTES.KONSERVASI.substring(1)} element={<Konservasi />} />
-            <Route path={ROUTES.PELAYANAN_AKADEMIK.substring(1)} element={<PelayananAkademik />} />
-            <Route path={ROUTES.PERTANIAN.substring(1)} element={<Pertanian />} />
-            <Route path={ROUTES.PETERNAKAN.substring(1)} element={<Peternakan />} />
+            <Route
+              path={ROUTES.KEMITRAAN.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="jatikerto">
+                  <Kemitraan />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.KONSERVASI.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="jatikerto">
+                  <Konservasi />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.PELAYANAN_AKADEMIK.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="jatikerto">
+                  <PelayananAkademik />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.PERTANIAN.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="jatikerto">
+                  <Pertanian />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.PETERNAKAN.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="jatikerto">
+                  <Peternakan />
+                </ProtectedRoute>
+              }
+            />
 
             {/* KST NGIJO */}
-            <Route path={ROUTES.KEBERLANJUTAN.substring(1)} element={<Keberlanjutan />} />
-            <Route path={ROUTES.TRACKER_INOVASI.substring(1)} element={<TrackerInovasi />} />
+            <Route
+              path={ROUTES.KEBERLANJUTAN.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="ngijo">
+                  <Keberlanjutan />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.TRACKER_INOVASI.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="ngijo">
+                  <TrackerInovasi />
+                </ProtectedRoute>
+              }
+            />
 
             {/* <Route path={ROUTES.PROFILE.substring(1)} element={<DummyPage title="Profil" />} />
             <Route path={ROUTES.CHANGE_PASSWORD.substring(1)} element={<DummyPage title="Ganti Password" />} /> */}

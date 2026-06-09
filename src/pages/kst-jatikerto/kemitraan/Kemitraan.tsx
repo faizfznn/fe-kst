@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { usePageData } from "@/api/hooks";
+import { getJatikertoDataMessage } from "../dataState";
+import { rowIdentity, textValue, type JatikertoApiRow } from "../rowMappers";
 
-interface MitraRow {
+interface MitraRow extends JatikertoApiRow {
   id?: string;
-  no: number;
+  no?: number;
   mitra: string;
   bidangKerjasama: string;
   jangkaWaktuKontrak: string;
@@ -108,12 +110,37 @@ export const tableData: MitraRow[] = [
 
 const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
 
+function getRowKey(row: MitraRow, index: number) {
+  return rowIdentity(row) ?? `${row.mitra}-${row.jangkaWaktuKontrak}-${index}`;
+}
+
+function mapMitraRow(row: MitraRow): MitraRow {
+  if (!row.colValues) return row;
+
+  const mulai = textValue(row, 2);
+  const selesai = textValue(row, 3);
+
+  return {
+    ...row,
+    id: row.rowId ?? row.id,
+    mitra: textValue(row, 0),
+    bidangKerjasama: textValue(row, 1),
+    jangkaWaktuKontrak: [mulai, selesai].filter(Boolean).join(" - "),
+    keterangan: textValue(row, 4, "-"),
+  };
+}
+
 export default function Kemitraan() {
   const [selectedYear, setSelectedYear] = useState("2026");
   const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
-  const { items: tableData } = usePageData<MitraRow>("/kst/jatikerto/kemitraan", {
+  const {
+    items: tableData,
+    isLoading,
+    error,
+    errorStatus,
+  } = usePageData<MitraRow>("/kst/jatikerto/data/kemitraan/items", {
     year: selectedYear,
     month: selectedMonth,
     limit: 50,
@@ -125,7 +152,13 @@ export default function Kemitraan() {
   const paginatedData = tableData.slice(
     (currentPage - 1) * rowsPerPageNumber,
     currentPage * rowsPerPageNumber
-  );
+  ).map(mapMitraRow);
+  const tableMessage = getJatikertoDataMessage({
+    isLoading,
+    error,
+    errorStatus,
+    hasItems: tableData.length > 0,
+  });
 
 
   return (
@@ -192,8 +225,18 @@ export default function Kemitraan() {
             </TableHeader>
 
             <TableBody>
-              {paginatedData.map((row, index) => (
-                <TableRow key={row.id ?? row.no} className="hover:bg-gray-50/50 group">
+              {tableMessage ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="h-32 text-center text-[13px] text-gray-400 font-medium"
+                  >
+                    {tableMessage}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((row, index) => (
+                <TableRow key={getRowKey(row, index)} className="hover:bg-gray-50/50 group">
                   <TableCell className="text-[13px] text-gray-500 font-medium pl-5">
                     {(currentPage - 1) * rowsPerPageNumber + index + 1}.
                   </TableCell>
@@ -220,7 +263,8 @@ export default function Kemitraan() {
                     </button>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

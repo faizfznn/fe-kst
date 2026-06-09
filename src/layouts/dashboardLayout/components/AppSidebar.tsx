@@ -139,6 +139,12 @@ const REPORT_OPTIONS: Record<ReportKst, string[]> = {
   ],
 };
 
+const REPORT_KST_LABELS: Record<ReportKst, string> = {
+  ngijo: "KST Ngijo",
+  cangar: "KST Cangar",
+  jatikerto: "KST Jatikerto",
+};
+
 const MONTH_OPTIONS = [
   "Semua Bulan",
   "Januari",
@@ -173,6 +179,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [selectedMonth, setSelectedMonth] = React.useState("Januari");
   const [selectedFormat, setSelectedFormat] =
     React.useState<ReportFormat>("xlsx");
+  const allowedReportKsts = React.useMemo(
+    () =>
+      (["ngijo", "cangar", "jatikerto"] as ReportKst[]).filter((kst) =>
+        user?.kstAccess.includes(kst),
+      ),
+    [user?.kstAccess],
+  );
 
   const toggleGroup = (title: string) => {
     setOpenGroups((prev) => ({
@@ -187,11 +200,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   const handleDownloadReport = async () => {
-    const reportName = selectedReport.toLowerCase().replaceAll(" ", "-");
+    if (!allowedReportKsts.includes(effectiveSelectedKst)) {
+      throw new Error("Tidak memiliki akses untuk mengunduh laporan KST ini");
+    }
+
+    const reportName = effectiveSelectedReport.toLowerCase().replaceAll(" ", "-");
     const token = localStorage.getItem("access_token");
     const response = await fetch(
       getDownloadUrl("/reports/download", {
-        kst: selectedKst,
+        kst: effectiveSelectedKst,
         report: reportName,
         year: selectedYear,
         month: selectedMonth,
@@ -249,12 +266,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .slice(0, 2)
       .toUpperCase() ?? "U";
 
-  const selectedKstLabel =
-    selectedKst === "ngijo"
-      ? "KST Ngijo"
-      : selectedKst === "cangar"
-      ? "KST Cangar"
-      : "KST Jatikerto";
+  const effectiveSelectedKst = allowedReportKsts.includes(selectedKst)
+    ? selectedKst
+    : allowedReportKsts[0] ?? selectedKst;
+  const effectiveSelectedReport = REPORT_OPTIONS[effectiveSelectedKst].includes(selectedReport)
+    ? selectedReport
+    : REPORT_OPTIONS[effectiveSelectedKst][0];
+  const selectedKstLabel = REPORT_KST_LABELS[effectiveSelectedKst];
 
   React.useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -301,6 +319,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="px-1 group-data-[collapsible=icon]:hidden">
             <Button
               onClick={() => setIsReportModalOpen(true)}
+              disabled={allowedReportKsts.length === 0}
               className="w-full justify-center gap-2 bg-[#27A376] hover:bg-[#1f8a63] text-white font-semibold rounded-lg h-9 shadow-sm text-[12px]"
             >
               <Download className="size-3" />
@@ -448,20 +467,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </label>
 
                   <Select
-                    value={selectedKst}
+                    value={effectiveSelectedKst}
                     onValueChange={(value) =>
                       handleChangeKst(value as ReportKst)
                     }
-                  >
-                    <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
+                    >
+                      <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
 
-                    <SelectContent>
-                      <SelectItem value="ngijo">KST Ngijo</SelectItem>
-                      <SelectItem value="cangar">KST Cangar</SelectItem>
-                      <SelectItem value="jatikerto">KST Jatikerto</SelectItem>
-                    </SelectContent>
+                      <SelectContent>
+                        {allowedReportKsts.map((kst) => (
+                          <SelectItem key={kst} value={kst}>
+                            {REPORT_KST_LABELS[kst]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                   </Select>
                 </div>
 
@@ -471,7 +492,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </label>
 
                   <Select
-                    value={selectedReport}
+                    value={effectiveSelectedReport}
                     onValueChange={setSelectedReport}
                   >
                     <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
@@ -479,7 +500,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SelectTrigger>
 
                     <SelectContent>
-                      {REPORT_OPTIONS[selectedKst].map((report) => (
+                      {REPORT_OPTIONS[effectiveSelectedKst].map((report) => (
                         <SelectItem key={report} value={report}>
                           {report}
                         </SelectItem>
