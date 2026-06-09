@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiClient } from "./config";
+import { ApiError, apiClient } from "./config";
 
 interface PageContainer<T> {
   offset: number;
@@ -7,6 +7,29 @@ interface PageContainer<T> {
   hasNext: boolean;
   total?: number;
   items: T[];
+}
+
+interface DataContainer<T> {
+  data?: PageContainer<T>;
+}
+
+type PagePayload<T> = PageContainer<T> | DataContainer<T>;
+
+function hasItems<T>(payload: unknown): payload is PageContainer<T> {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      Array.isArray((payload as PageContainer<T>).items),
+  );
+}
+
+export function parsePageContainer<T>(payload: PagePayload<T> | null): PageContainer<T> | null {
+  const nestedData =
+    payload && typeof payload === "object" && "data" in payload ? payload.data : null;
+
+  if (hasItems<T>(nestedData)) return nestedData;
+  if (hasItems<T>(payload)) return payload;
+  return null;
 }
 
 export function useApiData<T>(
@@ -17,6 +40,7 @@ export function useApiData<T>(
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const key = useMemo(() => JSON.stringify(query ?? {}), [query]);
 
   useEffect(() => {
@@ -25,6 +49,7 @@ export function useApiData<T>(
     let cancelled = false;
     setIsLoading(true);
     setError(null);
+    setErrorStatus(null);
 
     apiClient
       .get<T>(path, query)
@@ -32,7 +57,10 @@ export function useApiData<T>(
         if (!cancelled) setData(response);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Gagal memuat data");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Gagal memuat data");
+          setErrorStatus(err instanceof ApiError ? err.status : null);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -43,15 +71,18 @@ export function useApiData<T>(
     };
   }, [path, key, enabled]);
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, errorStatus };
 }
 
 export function usePageData<T>(path: string, query?: Record<string, unknown>) {
-  const { data, isLoading, error } = useApiData<PageContainer<T>>(path, query);
+  const { data, isLoading, error, errorStatus } = useApiData<PagePayload<T>>(path, query);
+  const page = parsePageContainer<T>(data);
+
   return {
-    items: data?.items ?? [],
-    page: data,
+    items: page?.items ?? ([] as T[]),
+    page,
     isLoading,
     error,
+    errorStatus,
   };
 }

@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { usePageData } from "@/api/hooks";
+import { getJatikertoDataMessage } from "../dataState";
+import { numberValue, rowIdentity, textValue, type JatikertoApiRow } from "../rowMappers";
 
-interface PeternakanRow {
+interface PeternakanRow extends JatikertoApiRow {
   id?: string;
-  no: number;
+  no?: number;
   namaKomoditas: string;
   jumlah: number;
   satuan: string;
@@ -141,12 +143,37 @@ export const tableData: PeternakanRow[] = [
 
 const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
 
+function getRowKey(row: PeternakanRow, index: number) {
+  return rowIdentity(row) ?? `${row.namaKomoditas}-${index}`;
+}
+
+function mapPeternakanRow(row: PeternakanRow): PeternakanRow {
+  if (!row.colValues) return row;
+
+  return {
+    ...row,
+    id: row.rowId ?? row.id,
+    namaKomoditas: textValue(row, 0),
+    luasUsaha: `${numberValue(row, 1).toLocaleString("id-ID")} m2`,
+    ketersediaanBulan: numberValue(row, 2),
+    ketersediaanTahun: `${numberValue(row, 3)} Kali`,
+    jumlah: numberValue(row, 4),
+    satuan: textValue(row, 5),
+    keterangan: textValue(row, 6, "-"),
+  };
+}
+
 export default function Peternakan() {
   const [selectedYear, setSelectedYear] = useState("2026");
   const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
-  const { items: tableData } = usePageData<PeternakanRow>("/kst/jatikerto/peternakan", {
+  const {
+    items: tableData,
+    isLoading,
+    error,
+    errorStatus,
+  } = usePageData<PeternakanRow>("/kst/jatikerto/data/peternakan/items", {
     year: selectedYear,
     month: selectedMonth,
     limit: 50,
@@ -161,7 +188,13 @@ export default function Peternakan() {
   const paginatedData = tableData.slice(
     (currentPage - 1) * rowsPerPageNumber,
     currentPage * rowsPerPageNumber
-  );
+  ).map(mapPeternakanRow);
+  const tableMessage = getJatikertoDataMessage({
+    isLoading,
+    error,
+    errorStatus,
+    hasItems: tableData.length > 0,
+  });
 
   return (
     <div className="flex flex-col gap-5 p-4 md:p-6 bg-gray-50/50 min-h-screen">
@@ -266,8 +299,18 @@ export default function Peternakan() {
             </TableHeader>
 
             <TableBody>
-              {paginatedData.map((row, index) => (
-                <TableRow key={row.id ?? row.no} className="hover:bg-gray-50/50 group">
+              {tableMessage ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    className="h-32 text-center text-[13px] text-gray-400 font-medium"
+                  >
+                    {tableMessage}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((row, index) => (
+                <TableRow key={getRowKey(row, index)} className="hover:bg-gray-50/50 group">
                   <TableCell className="text-[13px] text-gray-500 font-medium text-center px-0">
                     {(currentPage - 1) * rowsPerPageNumber + index + 1}.
                   </TableCell>
@@ -306,7 +349,8 @@ export default function Peternakan() {
                     </button>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

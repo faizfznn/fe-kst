@@ -23,6 +23,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { getDownloadUrl } from "@/api/config";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReportDownloadCommandProps {
   open: boolean;
@@ -148,6 +149,20 @@ export function ReportDownloadCommand({
   open,
   setOpen,
 }: ReportDownloadCommandProps) {
+  const { user } = useAuth();
+  const allowedReports = React.useMemo(
+    () =>
+      reports.filter((report) => {
+        const kst = report.kst.includes("Ngijo")
+          ? "ngijo"
+          : report.kst.includes("Cangar")
+            ? "cangar"
+            : "jatikerto";
+
+        return user?.kstAccess.includes(kst) ?? false;
+      }),
+    [user?.kstAccess],
+  );
   const runDownload = React.useCallback(
     (report: ReportItem) => {
       setOpen(false);
@@ -156,9 +171,9 @@ export function ReportDownloadCommand({
     [setOpen]
   );
 
-  const ngijoReports = reports.filter((report) => report.kst === "KST Ngijo");
-  const cangarReports = reports.filter((report) => report.kst === "KST Cangar");
-  const jatikertoReports = reports.filter(
+  const ngijoReports = allowedReports.filter((report) => report.kst === "KST Ngijo");
+  const cangarReports = allowedReports.filter((report) => report.kst === "KST Cangar");
+  const jatikertoReports = allowedReports.filter(
     (report) => report.kst === "KST Jatikerto"
   );
 
@@ -194,21 +209,29 @@ export function ReportDownloadCommand({
       <CommandList>
         <CommandEmpty>Laporan tidak ditemukan.</CommandEmpty>
 
-        <CommandGroup heading="KST Ngijo">
-          {ngijoReports.map(renderReportItem)}
-        </CommandGroup>
+        {ngijoReports.length > 0 && (
+          <>
+            <CommandGroup heading="KST Ngijo">
+              {ngijoReports.map(renderReportItem)}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
-        <CommandSeparator />
+        {cangarReports.length > 0 && (
+          <>
+            <CommandGroup heading="KST Cangar">
+              {cangarReports.map(renderReportItem)}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
-        <CommandGroup heading="KST Cangar">
-          {cangarReports.map(renderReportItem)}
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        <CommandGroup heading="KST Jatikerto">
-          {jatikertoReports.map(renderReportItem)}
-        </CommandGroup>
+        {jatikertoReports.length > 0 && (
+          <CommandGroup heading="KST Jatikerto">
+            {jatikertoReports.map(renderReportItem)}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );

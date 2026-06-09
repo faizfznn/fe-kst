@@ -24,10 +24,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { usePageData } from "@/api/hooks";
+import { getJatikertoDataMessage } from "../dataState";
+import { numberValue, rowIdentity, textValue, type JatikertoApiRow } from "../rowMappers";
 
-interface MahasiswaRow {
+interface MahasiswaRow extends JatikertoApiRow {
   id?: string;
-  no: number;
+  no?: number;
   namaMahasiswa: string;
   dosenPembimbing: string;
   programStudi:
@@ -156,13 +158,38 @@ export const tableData: MahasiswaRow[] = [
 
 const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
 
+function getRowKey(row: MahasiswaRow, index: number) {
+  return rowIdentity(row) ?? `${row.namaMahasiswa}-${row.judulPenelitian}-${index}`;
+}
+
+function mapMahasiswaRow(row: MahasiswaRow): MahasiswaRow {
+  if (!row.colValues) return row;
+
+  return {
+    ...row,
+    id: row.rowId ?? row.id,
+    namaMahasiswa: textValue(row, 0),
+    dosenPembimbing: textValue(row, 1),
+    programStudi: textValue(row, 2) as MahasiswaRow["programStudi"],
+    mulai: textValue(row, 3),
+    selesai: textValue(row, 4),
+    luasan: `${numberValue(row, 5).toLocaleString("id-ID")} m2`,
+    judulPenelitian: textValue(row, 6),
+  };
+}
+
 export default function PelayananAkademik() {
   const [selectedYear, setSelectedYear] = useState("2026");
   const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
-  const { items: tableData } = usePageData<MahasiswaRow>(
-    "/kst/jatikerto/pelayanan-akademik",
+  const {
+    items: tableData,
+    isLoading,
+    error,
+    errorStatus,
+  } = usePageData<MahasiswaRow>(
+    "/kst/jatikerto/data/akademik/items",
     { year: selectedYear, month: selectedMonth, limit: 50 },
   );
 
@@ -172,7 +199,13 @@ export default function PelayananAkademik() {
   const paginatedData = tableData.slice(
     (currentPage - 1) * rowsPerPageNumber,
     currentPage * rowsPerPageNumber
-  );
+  ).map(mapMahasiswaRow);
+  const tableMessage = getJatikertoDataMessage({
+    isLoading,
+    error,
+    errorStatus,
+    hasItems: tableData.length > 0,
+  });
 
 
   return (
@@ -251,8 +284,18 @@ export default function PelayananAkademik() {
             </TableHeader>
 
             <TableBody>
-              {paginatedData.map((row, index) => (
-                <TableRow key={row.id ?? row.no} className="hover:bg-gray-50/50 group">
+              {tableMessage ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    className="h-32 text-center text-[13px] text-gray-400 font-medium"
+                  >
+                    {tableMessage}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((row, index) => (
+                <TableRow key={getRowKey(row, index)} className="hover:bg-gray-50/50 group">
                   <TableCell className="text-[13px] text-gray-500 font-medium pl-5">
                     {(currentPage - 1) * rowsPerPageNumber + index + 1}.
                   </TableCell>
@@ -297,7 +340,8 @@ export default function PelayananAkademik() {
                     </button>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
