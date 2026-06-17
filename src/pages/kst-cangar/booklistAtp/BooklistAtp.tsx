@@ -1,16 +1,10 @@
-import { useState } from "react";
-import {
-  TrendingUp,
-  TrendingDown,
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  CalendarCheck,
-  Wallet,
-  LayoutGrid,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarCheck, CheckCircle2, Clock3, RotateCcw, Search } from "lucide-react";
+import { useApiData } from "@/api/hooks";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -26,715 +20,435 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useApiData, usePageData } from "@/api/hooks";
+import { adaptBookingRows, adaptBookingSummary } from "../adapters";
+import {
+  CangarAlert,
+  CangarEmptyState,
+  CangarHero,
+  CangarSummaryCards,
+  cangarTableHeadClass,
+  cangarTableHeaderClass,
+  cangarTableRowClass,
+  cangarTabsListClass,
+  cangarTabsTriggerClass,
+  tableLoadingRow,
+} from "../cangarUi";
+import { cangarFriendlyMessage } from "../cangarHelpers";
 
-type DisplayType = "reservasi" | "pelanggan";
+const BOOKING_TABS = ["Daftar Booking", "Jadwal & Ketersediaan"];
 
-interface BookingRow {
-  id?: string;
-  no: number;
-  nama: string;
-  checkIn: string;
-  checkOut: string;
-  tipe: string;
-  noUnit: string;
-  harga: string;
-  status: "Lunas" | "Belum Lunas";
-  keterangan: string;
+type BookingFilters = {
+  status: string;
+  layanan: string;
+  tanggal: string;
+};
+
+const initialFilters: BookingFilters = {
+  status: "all",
+  layanan: "all",
+  tanggal: "",
+};
+
+function bookingStatusMatches(rowStatus: string, selectedStatus: string) {
+  if (selectedStatus === "all") return true;
+
+  const normalizedStatus = rowStatus.toLowerCase();
+  if (selectedStatus === "cancelled") {
+    return ["cancelled", "canceled", "dibatalkan", "batal"].includes(normalizedStatus);
+  }
+
+  return normalizedStatus === selectedStatus.toLowerCase();
 }
 
-interface CustomerRow {
-  id?: string;
-  no: number;
-  nama: string;
-  domisili: string;
-  kontak: string;
-  jumlahTamu: number;
-  harga: string;
-  status: "Lunas" | "Belum Lunas";
-  keterangan: string;
+const SERVICE_CAPACITY: Record<string, { label: string; capacity: number }> = {
+  glamping: { label: "Glamping", capacity: 0 },
+  cafe: { label: "Café Eduwisata", capacity: 0 },
+  camping: { label: "Camping Ground", capacity: 0 },
+};
+
+const SERVICE_ORDER: Record<string, number> = {
+  glamping: 0,
+  camping: 1,
+  cafe: 2,
+};
+
+function serviceKey(layanan: string) {
+  const normalized = layanan.toLowerCase().trim();
+  if (["cafe", "caf\u00e9", "cafe eduwisata", "caf\u00e9 eduwisata"].includes(normalized)) return "cafe";
+  if (["camping", "camping ground"].includes(normalized)) return "camping";
+  if (normalized === "glamping") return "glamping";
+  return normalized;
 }
 
-export const bookingData: BookingRow[] = [
-  {
-    no: 1,
-    nama: "Ahmad Rizki Alsena Airlangga",
-    checkIn: "1/5/2026",
-    checkOut: "3/5/2026",
-    tipe: "Glamping Deluxe",
-    noUnit: "Deluxe 3",
-    harga: "Rp 1.500.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 2,
-    nama: "Siti Nurhaliza",
-    checkIn: "2/5/2026",
-    checkOut: "6/5/2026",
-    tipe: "Villa Family",
-    noUnit: "Villa 5",
-    harga: "Rp 2.800.000",
-    status: "Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 3,
-    nama: "Budi Santoso",
-    checkIn: "3/5/2026",
-    checkOut: "4/5/2026",
-    tipe: "Camping Ground",
-    noUnit: "Tenda Standard",
-    harga: "Rp 500.000",
-    status: "Belum Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 4,
-    nama: "Dewi Lestari",
-    checkIn: "4/5/2026",
-    checkOut: "7/5/2026",
-    tipe: "Glamping Deluxe",
-    noUnit: "Deluxe 1",
-    harga: "Rp 1.700.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 5,
-    nama: "Rian Aditya",
-    checkIn: "2/5/2026",
-    checkOut: "5/5/2026",
-    tipe: "Villa Family",
-    noUnit: "Villa 3",
-    harga: "Rp 2.600.000",
-    status: "Belum Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 6,
-    nama: "Maya Sari",
-    checkIn: "5/5/2026",
-    checkOut: "9/5/2026",
-    tipe: "Camping Ground",
-    noUnit: "Tenda Premium",
-    harga: "Rp 850.000",
-    status: "Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 7,
-    nama: "Agus Wijaya",
-    checkIn: "1/5/2026",
-    checkOut: "3/5/2026",
-    tipe: "Glamping Deluxe",
-    noUnit: "Deluxe 2",
-    harga: "Rp 1.550.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 8,
-    nama: "Lila Pratiwi",
-    checkIn: "6/5/2026",
-    checkOut: "10/5/2026",
-    tipe: "Villa Family",
-    noUnit: "Villa 4",
-    harga: "Rp 2.900.000",
-    status: "Belum Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 9,
-    nama: "Andi Setiawan",
-    checkIn: "3/5/2026",
-    checkOut: "5/5/2026",
-    tipe: "Camping Ground",
-    noUnit: "Tenda Standard",
-    harga: "Rp 450.000",
-    status: "Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 10,
-    nama: "Nina Kartika",
-    checkIn: "4/5/2026",
-    checkOut: "8/5/2026",
-    tipe: "Glamping Deluxe",
-    noUnit: "Deluxe 3",
-    harga: "Rp 1.600.000",
-    status: "Belum Lunas",
-    keterangan: "Transfer Bank",
-  },
-];
-
-export const customerData: CustomerRow[] = [
-  {
-    no: 1,
-    nama: "Ahmad Rizki",
-    domisili: "Malang, Jawa Timur",
-    kontak: "08123456890",
-    jumlahTamu: 4,
-    harga: "Rp 1.500.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 2,
-    nama: "Siti Nurhaliza",
-    domisili: "Surabaya, Jawa Timur",
-    kontak: "08234567901",
-    jumlahTamu: 5,
-    harga: "Rp 2.800.000",
-    status: "Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 3,
-    nama: "Budi Santoso",
-    domisili: "Jakarta, DKI Jakarta",
-    kontak: "08345678012",
-    jumlahTamu: 2,
-    harga: "Rp 500.000",
-    status: "Belum Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 4,
-    nama: "Dewi Lestari",
-    domisili: "Bandung, Jawa Barat",
-    kontak: "08456789123",
-    jumlahTamu: 6,
-    harga: "Rp 1.700.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 5,
-    nama: "Rian Aditya",
-    domisili: "Yogyakarta, DI Yogyakarta",
-    kontak: "08567890234",
-    jumlahTamu: 3,
-    harga: "Rp 2.600.000",
-    status: "Belum Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 6,
-    nama: "Maya Sari",
-    domisili: "Semarang, Jawa Tengah",
-    kontak: "08678901345",
-    jumlahTamu: 4,
-    harga: "Rp 850.000",
-    status: "Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 7,
-    nama: "Agus Wijaya",
-    domisili: "Medan, Sumatera Utara",
-    kontak: "08789012456",
-    jumlahTamu: 5,
-    harga: "Rp 1.550.000",
-    status: "Lunas",
-    keterangan: "Transfer Bank",
-  },
-  {
-    no: 8,
-    nama: "Lila Pratiwi",
-    domisili: "Makassar, Sulawesi Selatan",
-    kontak: "08890123567",
-    jumlahTamu: 7,
-    harga: "Rp 2.900.000",
-    status: "Belum Lunas",
-    keterangan: "Kartu Kredit",
-  },
-  {
-    no: 9,
-    nama: "Andi Setiawan",
-    domisili: "Palembang, Sumatera Selatan",
-    kontak: "08901234678",
-    jumlahTamu: 2,
-    harga: "Rp 450.000",
-    status: "Lunas",
-    keterangan: "Cash",
-  },
-  {
-    no: 10,
-    nama: "Nina Kartika",
-    domisili: "Pontianak, Kalimantan Barat",
-    kontak: "08012345789",
-    jumlahTamu: 6,
-    harga: "Rp 1.600.000",
-    status: "Belum Lunas",
-    keterangan: "Transfer Bank",
-  },
-];
-
-const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
-
-function MonthTab({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-150 whitespace-nowrap",
-        active
-          ? "bg-gray-900 text-white shadow-sm"
-          : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-      )}
-    >
-      {label}
-    </button>
-  );
+function serviceInfo(layanan: string) {
+  const key = serviceKey(layanan);
+  if (key === "glamping") return { label: "Glamping", capacity: SERVICE_CAPACITY.glamping.capacity };
+  if (key === "cafe") return { label: "Café Eduwisata", capacity: SERVICE_CAPACITY.cafe.capacity };
+  if (key === "camping") return { label: "Camping Ground", capacity: SERVICE_CAPACITY.camping.capacity };
+  return { label: layanan === "-" ? "-" : layanan, capacity: 0 };
 }
 
 export default function BooklistAtp() {
-  const [selectedYear, setSelectedYear] = useState("2026");
-  const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState("10");
-  const [displayType, setDisplayType] = useState<DisplayType>("reservasi");
-  const { data: summary } = useApiData<{
-    total_booking: number;
-    total_booking_trend: number;
-    total_pendapatan: number;
-    total_pendapatan_trend: number;
-    lunas: number;
-    belum_lunas: number;
-  }>("/kst/cangar/booklist-atp/summary", {
-    year: selectedYear,
-    month: selectedMonth,
-  });
-  const { items: bookingRows } = usePageData<BookingRow>(
-    "/kst/cangar/booklist-atp/reservasi",
-    { year: selectedYear, month: selectedMonth, limit: 50 },
-  );
-  const { items: customerRows } = usePageData<CustomerRow>(
-    "/kst/cangar/booklist-atp/pelanggan",
-    { year: selectedYear, month: selectedMonth, limit: 50 },
+  const [draftFilters, setDraftFilters] = useState<BookingFilters>(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState<BookingFilters>(initialFilters);
+
+  const {
+    data: bookingPayload,
+    isLoading,
+    error: bookingError,
+  } = useApiData<unknown>("/api/kst/cangar/data/booking", { limit: 100 });
+  const { data: summaryPayload, error: summaryError } = useApiData<unknown>(
+    "/api/kst/cangar/data/summary",
   );
 
-  const bookingData = bookingRows;
-  const customerData = customerRows;
-  const activeData = displayType === "reservasi" ? bookingData : customerData;
-  const rowsPerPageNumber = Number(rowsPerPage);
-  const totalPages = Math.max(1, Math.ceil(activeData.length / rowsPerPageNumber));
+  const rows = useMemo(() => adaptBookingRows(bookingPayload), [bookingPayload]);
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        const statusMatches = bookingStatusMatches(row.status, appliedFilters.status);
+        const layananMatches =
+          appliedFilters.layanan === "all" ||
+          row.layanan.toLowerCase() === appliedFilters.layanan.toLowerCase();
+        const tanggalMatches =
+          !appliedFilters.tanggal || row.tanggalRaw === appliedFilters.tanggal;
 
-  const paginatedData = activeData.slice(
-    (currentPage - 1) * rowsPerPageNumber,
-    currentPage * rowsPerPageNumber
+        return statusMatches && layananMatches && tanggalMatches;
+      }),
+    [rows, appliedFilters],
   );
+  const summary = useMemo(() => adaptBookingSummary(summaryPayload, rows), [summaryPayload, rows]);
+  const activeBookings = useMemo(
+    () => rows.filter((row) => row.status !== "Dibatalkan").length,
+    [rows],
+  );
+  const scheduleRows = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        key: string;
+        tanggal: string;
+        tanggalRaw: string;
+        layanan: string;
+        totalBooking: number;
+        confirmedQty: number;
+        pending: number;
+        capacity: number;
+        serviceOrder: number;
+      }
+    >();
 
-  const lunasCount =
-    summary?.lunas ?? bookingData.filter((row) => row.status === "Lunas").length;
-  const belumLunasCount =
-    summary?.belum_lunas ??
-    bookingData.filter((row) => row.status === "Belum Lunas").length;
+    rows.filter((row) => row.status !== "Dibatalkan").forEach((row) => {
+      const info = serviceInfo(row.layanan);
+      const key = `${row.tanggalRaw}-${serviceKey(row.layanan)}`;
+      const existing = grouped.get(key) ?? {
+        key,
+        tanggal: row.tanggal,
+        tanggalRaw: row.tanggalRaw,
+        layanan: info.label,
+        totalBooking: 0,
+        confirmedQty: 0,
+        pending: 0,
+        capacity: row.kapasitas ?? info.capacity,
+        serviceOrder: SERVICE_ORDER[serviceKey(row.layanan)] ?? 99,
+      };
+
+      existing.totalBooking += 1;
+      if (row.status === "Confirmed") existing.confirmedQty += row.jumlah;
+      if (row.status === "Pending") existing.pending += 1;
+      grouped.set(key, existing);
+    });
+
+    return Array.from(grouped.values()).sort(
+      (left, right) => left.tanggalRaw.localeCompare(right.tanggalRaw) || left.serviceOrder - right.serviceOrder,
+    );
+  }, [rows]);
+  const layananOptions = useMemo(() => {
+    const options = Array.from(new Set(rows.map((row) => row.layanan).filter((value) => value !== "-")));
+    return options.length > 0 ? options : ["Glamping", "Camping", "Villa"];
+  }, [rows]);
+
+  const handleReset = () => {
+    setDraftFilters(initialFilters);
+    setAppliedFilters(initialFilters);
+  };
 
   return (
-    <div className="flex flex-col gap-5 p-4 md:p-6 bg-gray-50/50 min-h-screen">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <CalendarCheck className="size-5 text-gray-500" />
-            <span className="text-[12px] font-semibold text-gray-600">
-              Total Booking
-            </span>
-          </div>
+    <div className="flex min-h-screen flex-col gap-5 bg-gray-50/50 p-4 md:p-6">
+      <CangarHero
+        title="Dashboard Reservasi Eco-Agrotourism"
+        description="Pengelolaan reservasi ATP, kunjungan edukasi, pelanggan, dan kapasitas layanan wisata KST Cangar."
+        badges={["Eco-Agrotourism", "Reservasi", "Edukasi"]}
+        metric={{ label: "Booking Aktif", value: activeBookings.toLocaleString("id-ID") }}
+      />
 
-          <div className="flex items-center justify-between">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight">
-              {summary?.total_booking ?? 0}
-            </span>
-            <div className="flex h-6 py-0.5 px-2 justify-center items-center gap-1 rounded-md border border-[#B2DDB5] bg-[#F5FBF5]">
-              <TrendingUp className="size-4 text-[#46A758]" />
-              <p className="text-xs font-bold text-[#46A758]">
-                +{summary?.total_booking_trend ?? 0}%
-              </p>
-            </div>
-          </div>
+      {bookingError || summaryError ? (
+        <CangarAlert>
+          {cangarFriendlyMessage(bookingError || summaryError)}
+        </CangarAlert>
+      ) : null}
 
-          <div className="space-y-0.5">
-            <p className="text-[13px] font-bold text-gray-800">
-              Peningkatan 12.5% dari bulan lalu
-            </p>
-            <p className="text-[11px] text-gray-400 font-medium">
-              Booking pada bulan ini meningkat sebesar 12.5%.
-            </p>
-          </div>
+      <CangarSummaryCards
+        items={[
+          { label: "Menunggu Konfirmasi", value: summary.pending, icon: Clock3, helper: "Booking yang perlu ditindaklanjuti", tone: "amber" },
+          { label: "Confirmed Bulan Ini", value: summary.confirmedMonth, icon: CheckCircle2, helper: "Reservasi terkonfirmasi", tone: "green" },
+          { label: "Booking Hari Ini", value: summary.today, icon: CalendarCheck, helper: "Aktivitas reservasi hari ini", tone: "blue" },
+          { label: "Total Booking Aktif", value: activeBookings, icon: CalendarCheck, helper: "Tidak termasuk dibatalkan" },
+        ]}
+      />
+
+      <Tabs defaultValue="Daftar Booking" className="gap-4">
+        <div className="overflow-x-auto pb-1">
+          <TabsList className={cangarTabsListClass}>
+            {BOOKING_TABS.map((tab) => (
+              <TabsTrigger key={tab} value={tab} className={cangarTabsTriggerClass}>
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <Wallet className="size-5 text-gray-500" />
-            <span className="text-[12px] font-semibold text-gray-600">
-              Total Pendapatan
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight">
-              Rp {(summary?.total_pendapatan ?? 0).toLocaleString("id-ID")}
-            </span>
-            <div className="flex h-6 py-0.5 px-2 justify-center items-center gap-1 rounded-md border border-[#F8D7DA] bg-[#FFF5F5]">
-              <TrendingDown className="size-4 text-[#E5484D]" />
-              <p className="text-xs font-bold text-[#E5484D]">
-                {summary?.total_pendapatan_trend ?? 0}%
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <p className="text-[13px] font-bold text-gray-800">
-              Penurunan 20% dari bulan lalu
-            </p>
-            <p className="text-[11px] text-gray-400 font-medium">
-              Pendapatan yang masuk bulan ini menurun sebesar 20%.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-row lg:flex-col gap-3 min-w-35">
-          <div className="flex-1 bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col items-start gap-1">
-            <span className="text-[11px] font-semibold text-gray-500">
-              Lunas
-            </span>
-            <span className="text-2xl font-extrabold text-gray-900">
-              {lunasCount}
-            </span>
-          </div>
-
-          <div className="flex-1 bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col items-start gap-1">
-            <span className="text-[11px] font-semibold text-gray-500">
-              Belum Lunas / DP
-            </span>
-            <span className="text-2xl font-extrabold text-gray-900">
-              {belumLunasCount}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-9 border-gray-200 bg-white text-[13px] font-medium">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2025">2025</SelectItem>
-              <SelectItem value="2026">2026</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="w-full sm:w-auto overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm w-max">
-              {months.map((month) => (
-                <MonthTab
-                  key={month}
-                  label={month}
-                  active={selectedMonth === month}
-                  onClick={() => setSelectedMonth(month)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <Select
-          value={displayType}
-          onValueChange={(value) => {
-            setDisplayType(value as DisplayType);
-            setCurrentPage(1);
-          }}
-        >
-          <SelectTrigger className="w-[190px] h-9 border-gray-200 rounded-lg bg-white">
-            <div className="flex items-center gap-2">
-              <LayoutGrid className="size-4" />
-              <SelectValue placeholder="Data yang Ditampilkan" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="reservasi">Data Reservasi</SelectItem>
-            <SelectItem value="pelanggan">Data Pelanggan</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          {displayType === "reservasi" ? (
-            <Table className="min-w-[1350px]">
-              <TableHeader>
-                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                  <TableHead className="font-bold text-gray-500 text-[12px] w-[50px] pl-5">
-                    No.
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[240px]">
-                    Nama Pelanggan
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[120px]">
-                    Check In
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[120px]">
-                    Check Out
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[180px]">
-                    Tipe
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[140px]">
-                    No Unit
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[150px]">
-                    Harga
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[130px]">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[220px]">
-                    Keterangan Status
-                  </TableHead>
-                  <TableHead className="w-[48px]" />
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {(paginatedData as BookingRow[]).map((row, index) => (
-                  <TableRow key={row.id ?? row.no} className="hover:bg-gray-50/50 group">
-                    <TableCell className="text-[13px] text-gray-500 font-medium pl-5">
-                      {(currentPage - 1) * rowsPerPageNumber + index + 1}.
-                    </TableCell>
-
-                    <TableCell className="text-[13px] font-medium text-gray-900 max-w-[240px] whitespace-normal break-words leading-relaxed">
-                      {row.nama}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-500 min-w-[120px] whitespace-nowrap tabular-nums">
-                      {row.checkIn}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-500 min-w-[120px] whitespace-nowrap tabular-nums">
-                      {row.checkOut}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-600 max-w-[180px] whitespace-normal break-words leading-relaxed">
-                      {row.tipe}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-600 max-w-[140px] whitespace-normal break-words leading-relaxed">
-                      {row.noUnit}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] font-semibold text-gray-900 min-w-[150px] whitespace-nowrap tabular-nums">
-                      {row.harga}
-                    </TableCell>
-
-                    <TableCell className="min-w-[130px] whitespace-nowrap">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-[12px] font-semibold",
-                          row.status === "Lunas"
-                            ? "text-emerald-600"
-                            : "text-red-500"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "size-2 rounded-full",
-                            row.status === "Lunas"
-                              ? "bg-emerald-500"
-                              : "bg-red-500"
-                          )}
-                        />
-                        {row.status}
-                      </span>
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-600 max-w-[220px] whitespace-normal break-words leading-relaxed">
-                      {row.keterangan}
-                    </TableCell>
-
-                    <TableCell>
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-100">
-                        <MoreVertical className="size-4 text-gray-400" />
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <Table className="min-w-[1200px]">
-              <TableHeader>
-                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                  <TableHead className="font-bold text-gray-500 text-[12px] w-[50px] pl-5">
-                    No.
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[200px]">
-                    Nama Pelanggan
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[200px]">
-                    Domisili
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[140px]">
-                    Kontak
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[120px]">
-                    Jumlah Tamu
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[150px]">
-                    Harga
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[130px]">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[220px]">
-                    Keterangan Status
-                  </TableHead>
-                  <TableHead className="w-[48px]" />
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {(paginatedData as CustomerRow[]).map((row, index) => (
-                  <TableRow key={row.id ?? row.no} className="hover:bg-gray-50/50 group">
-                    <TableCell className="text-[13px] text-gray-500 font-medium pl-5">
-                      {(currentPage - 1) * rowsPerPageNumber + index + 1}.
-                    </TableCell>
-
-                    <TableCell className="text-[13px] font-medium text-gray-900 max-w-[200px] whitespace-normal break-words leading-relaxed">
-                      {row.nama}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-600 max-w-[200px] whitespace-normal break-words leading-relaxed">
-                      {row.domisili}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-500 whitespace-nowrap">
-                      {row.kontak}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-center text-gray-500 whitespace-nowrap tabular-nums">
-                      {row.jumlahTamu}
-                    </TableCell>
-
-                    <TableCell className="text-[13px] font-semibold text-gray-900 whitespace-nowrap tabular-nums">
-                      {row.harga}
-                    </TableCell>
-
-                    <TableCell className="whitespace-nowrap">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-[12px] font-semibold",
-                          row.status === "Lunas"
-                            ? "text-emerald-600"
-                            : "text-red-500"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "size-2 rounded-full",
-                            row.status === "Lunas"
-                              ? "bg-emerald-500"
-                              : "bg-red-500"
-                          )}
-                        />
-                        {row.status}
-                      </span>
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-gray-600 max-w-[220px] whitespace-normal break-words leading-relaxed">
-                      {row.keterangan}
-                    </TableCell>
-
-                    <TableCell>
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-100">
-                        <MoreVertical className="size-4 text-gray-400" />
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-[13px] text-gray-500 font-medium">
-            <span className="whitespace-nowrap">Baris per Page</span>
-
-            <Select
-              value={rowsPerPage}
-              onValueChange={(value) => {
-                setRowsPerPage(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px] border-gray-200 bg-white text-[13px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-[13px] text-gray-500 font-medium whitespace-nowrap">
-              Page {currentPage} dari {totalPages}
-            </span>
-
-            <div className="flex items-center gap-1">
-              {[
-                {
-                  icon: ChevronsLeft,
-                  action: () => setCurrentPage(1),
-                  disabled: currentPage === 1,
-                },
-                {
-                  icon: ChevronLeft,
-                  action: () => setCurrentPage(Math.max(1, currentPage - 1)),
-                  disabled: currentPage === 1,
-                },
-                {
-                  icon: ChevronRight,
-                  action: () =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1)),
-                  disabled: currentPage === totalPages,
-                },
-                {
-                  icon: ChevronsRight,
-                  action: () => setCurrentPage(totalPages),
-                  disabled: currentPage === totalPages,
-                },
-              ].map((button, index) => (
-                <button
-                  key={index}
-                  onClick={button.action}
-                  disabled={button.disabled}
-                  className="p-1.5 rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        <TabsContent value="Daftar Booking" className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold text-gray-600">Status</span>
+                <Select
+                  value={draftFilters.status}
+                  onValueChange={(status) => setDraftFilters((current) => ({ ...current, status }))}
                 >
-                  <button.icon className="size-4" />
-                </button>
-              ))}
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold text-gray-600">Layanan</span>
+                <Select
+                  value={draftFilters.layanan}
+                  onValueChange={(layanan) => setDraftFilters((current) => ({ ...current, layanan }))}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Layanan</SelectItem>
+                    {layananOptions.map((layanan) => (
+                      <SelectItem key={layanan} value={layanan}>
+                        {layanan}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold text-gray-600">Tanggal</span>
+                <Input
+                  type="date"
+                  value={draftFilters.tanggal}
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({ ...current, tanggal: event.target.value }))
+                  }
+                  className="bg-white"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                className="gap-2 bg-[#27A376] text-white hover:bg-[#1f8a63]"
+                onClick={() => setAppliedFilters(draftFilters)}
+              >
+                <Search className="size-4" />
+                Filter
+              </Button>
+              <Button type="button" variant="outline" className="gap-2" onClick={handleReset}>
+                <RotateCcw className="size-4" />
+                Reset
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <Table className="min-w-[820px] table-fixed">
+                <TableHeader>
+                  <TableRow className={cangarTableHeaderClass}>
+                    <TableHead className={`${cangarTableHeadClass} w-[80px] text-center`}>ID</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[24%]`}>Nama Customer</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[16%]`}>No. HP</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[18%]`}>Layanan</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[16%]`}>Tanggal</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[90px] text-center`}>Jumlah</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[130px]`}>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    tableLoadingRow(7)
+                  ) : filteredRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="p-5">
+                        <CangarEmptyState title="Belum ada data yang dapat ditampilkan" description="Data booking Cangar akan tampil setelah tersedia atau filter diubah." />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRows.map((row) => (
+                      <TableRow key={row.id} className={cangarTableRowClass}>
+                        <TableCell className="text-center font-semibold text-gray-900">#{row.id}</TableCell>
+                        <TableCell className="whitespace-normal break-words font-medium leading-relaxed text-gray-900">{row.namaCustomer || "Belum tersedia"}</TableCell>
+                        <TableCell className="whitespace-normal break-words text-gray-600">{row.noHp || "Belum tersedia"}</TableCell>
+                        <TableCell className="whitespace-normal break-words text-gray-600">{row.layanan || "Belum tersedia"}</TableCell>
+                        <TableCell className="whitespace-normal break-words text-gray-600">{row.tanggal || "Belum tersedia"}</TableCell>
+                        <TableCell className="text-center tabular-nums">{row.jumlah}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "rounded-md",
+                              row.status === "Confirmed"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : row.status === "Dibatalkan"
+                                  ? "border-red-200 bg-red-50 text-red-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-700",
+                            )}
+                        >
+                          {row.status}
+                        </Badge>
+                      </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="Jadwal & Ketersediaan" className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-gray-700">Kapasitas per Hari</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-sm font-medium text-gray-600">
+              <Badge variant="outline" className="rounded-md border-gray-200 bg-gray-50 text-gray-700">
+                Kapasitas mengikuti data reservasi dari API.
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card className="rounded-lg border-gray-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-gray-600">Total Jadwal</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-900">{scheduleRows.length}</div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-lg border-gray-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-gray-600">Qty Confirmed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-700">
+                  {scheduleRows.reduce((total, row) => total + row.confirmedQty, 0)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-lg border-gray-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-gray-600">Sisa Kapasitas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-700">
+                  {scheduleRows.reduce((total, row) => total + Math.max(0, row.capacity - row.confirmedQty), 0)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <Table className="min-w-[760px] table-fixed">
+                <TableHeader>
+                  <TableRow className={cangarTableHeaderClass}>
+                    <TableHead className={`${cangarTableHeadClass} w-[18%]`}>Tanggal</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[22%]`}>Layanan</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[14%] text-center`}>Total Booking</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[16%] text-center`}>Qty Confirmed</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[12%] text-center`}>Pending</TableHead>
+                    <TableHead className={`${cangarTableHeadClass} w-[18%]`}>Ketersediaan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    tableLoadingRow(6)
+                  ) : scheduleRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-5">
+                        <CangarEmptyState title="Data belum tersedia" description="Jadwal booking Cangar sedang disiapkan." />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    scheduleRows.map((row) => {
+                      const hasCapacity = row.capacity > 0;
+                      const usedPercent = hasCapacity ? Math.min(100, Math.round((row.confirmedQty / row.capacity) * 100)) : 0;
+                      const remainingCapacity = hasCapacity ? Math.max(0, row.capacity - row.confirmedQty) : null;
+
+                      return (
+                        <TableRow key={row.key} className={cangarTableRowClass}>
+                          <TableCell className="whitespace-normal break-words text-gray-600">{row.tanggal}</TableCell>
+                          <TableCell className="font-medium text-gray-900">
+                            <span className="inline-flex items-center gap-2 whitespace-normal break-words">
+                              <span>{row.layanan}</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center tabular-nums">{row.totalBooking}</TableCell>
+                          <TableCell className="text-center tabular-nums">
+                            {hasCapacity ? `${row.confirmedQty} / ${row.capacity}` : row.confirmedQty}
+                          </TableCell>
+                          <TableCell className="text-center tabular-nums">{row.pending}</TableCell>
+                          <TableCell>
+                            <div className="flex min-w-[150px] flex-col gap-2">
+                              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                                <div
+                                  className="h-full rounded-full bg-emerald-500"
+                                  style={{ width: `${usedPercent}%` }}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-gray-500">
+                                  {hasCapacity ? `${row.confirmedQty} / ${row.capacity}` : "Kapasitas belum tersedia"}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700"
+                                >
+                                  {remainingCapacity === null ? "Netral" : `Sisa ${remainingCapacity}`}
+                                </Badge>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+

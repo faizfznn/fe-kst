@@ -15,9 +15,9 @@ import {
   LayoutDashboard,
   PawPrint,
   X,
-  FileText,
   FileSpreadsheet,
   Settings,
+  Banknote,
 } from "lucide-react";
 
 import {
@@ -33,6 +33,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import {
   Select,
   SelectContent,
@@ -43,7 +44,13 @@ import {
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes/routes";
 import { useAuth } from "@/hooks/useAuth";
-import { getDownloadUrl } from "@/api/config";
+import {
+  downloadReport,
+  findReportDefinition,
+  reportDefinitionsByKst,
+  type ReportFormat,
+  type ReportKst,
+} from "@/lib/reportExport";
 
 const NAV_ITEMS = [
   {
@@ -66,8 +73,8 @@ const NAV_ITEMS = [
     title: "KST Ngijo",
     items: [
       {
-        title: "Tracker Inovasi",
-        url: ROUTES.TRACKER_INOVASI,
+        title: "Penelitian",
+        url: ROUTES.PENELITIAN,
         icon: Activity,
       },
       {
@@ -86,9 +93,14 @@ const NAV_ITEMS = [
         icon: ClipboardList,
       },
       {
-        title: "Booklist ATP",
+        title: "Manajemen Booking",
         url: ROUTES.BOOKLIST_ATP,
         icon: Book,
+      },
+      {
+        title: "Keuangan",
+        url: ROUTES.KEUANGAN_CANGAR,
+        icon: Banknote,
       },
     ],
   },
@@ -124,42 +136,11 @@ const NAV_ITEMS = [
   },
 ];
 
-type ReportKst = "ngijo" | "cangar" | "jatikerto";
-type ReportFormat = "csv" | "xlsx" | "pdf";
-
-const REPORT_OPTIONS: Record<ReportKst, string[]> = {
-  ngijo: ["Tracker Inovasi", "Keberlanjutan"],
-  cangar: ["Stok Opname", "Booklist ATP"],
-  jatikerto: [
-    "Pertanian",
-    "Peternakan",
-    "Konservasi",
-    "Pelayanan Akademik",
-    "Kemitraan",
-  ],
-};
-
 const REPORT_KST_LABELS: Record<ReportKst, string> = {
   ngijo: "KST Ngijo",
   cangar: "KST Cangar",
   jatikerto: "KST Jatikerto",
 };
-
-const MONTH_OPTIONS = [
-  "Semua Bulan",
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
@@ -174,11 +155,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [selectedKst, setSelectedKst] = React.useState<ReportKst>("jatikerto");
-  const [selectedReport, setSelectedReport] = React.useState("Pertanian");
-  const [selectedYear, setSelectedYear] = React.useState("2026");
-  const [selectedMonth, setSelectedMonth] = React.useState("Januari");
+  const [selectedReport, setSelectedReport] = React.useState("pertanian");
   const [selectedFormat, setSelectedFormat] =
     React.useState<ReportFormat>("xlsx");
+  const [isGeneratingReport, setIsGeneratingReport] = React.useState(false);
+  const [reportError, setReportError] = React.useState<string | null>(null);
   const allowedReportKsts = React.useMemo(
     () =>
       (["ngijo", "cangar", "jatikerto"] as ReportKst[]).filter((kst) =>
@@ -196,46 +177,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const handleChangeKst = (value: ReportKst) => {
     setSelectedKst(value);
-    setSelectedReport(REPORT_OPTIONS[value][0]);
+    setSelectedReport(reportDefinitionsByKst(value)[0]?.id ?? "");
+    setReportError(null);
   };
 
   const handleDownloadReport = async () => {
     if (!allowedReportKsts.includes(effectiveSelectedKst)) {
-      throw new Error("Tidak memiliki akses untuk mengunduh laporan KST ini");
+      setReportError("Anda tidak memiliki akses untuk mengunduh laporan KST ini.");
+      return;
     }
 
-    const reportName = effectiveSelectedReport.toLowerCase().replaceAll(" ", "-");
-    const token = localStorage.getItem("access_token");
-    const response = await fetch(
-      getDownloadUrl("/reports/download", {
-        kst: effectiveSelectedKst,
-        report: reportName,
-        year: selectedYear,
-        month: selectedMonth,
-        format: selectedFormat,
-      }),
-      {
-        credentials: "include",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Gagal mengunduh laporan");
+    const definition = findReportDefinition(effectiveSelectedKst, effectiveSelectedReport);
+    if (!definition) {
+      setReportError("Laporan belum tersedia untuk cabang yang dipilih.");
+      return;
     }
 
-    const blob = await response.blob();
-    const disposition = response.headers.get("content-disposition") ?? "";
-    const fileName = disposition.match(/filename="([^"]+)"/)?.[1] ?? `laporan-${reportName}.csv`;
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = fileName;
-    link.click();
-
-    URL.revokeObjectURL(url);
-    setIsReportModalOpen(false);
+    setIsGeneratingReport(true);
+    setReportError(null);
+    try {
+      await downloadReport(definition, selectedFormat);
+      setIsReportModalOpen(false);
+    } catch (error) {
+      setReportError(
+        error instanceof Error
+          ? error.message
+          : "Laporan belum bisa dibuat karena data tidak tersedia atau koneksi bermasalah.",
+      );
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   const allowedNavItems = NAV_ITEMS.map((group) => ({
@@ -269,9 +240,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const effectiveSelectedKst = allowedReportKsts.includes(selectedKst)
     ? selectedKst
     : allowedReportKsts[0] ?? selectedKst;
-  const effectiveSelectedReport = REPORT_OPTIONS[effectiveSelectedKst].includes(selectedReport)
+  const reportOptions = reportDefinitionsByKst(effectiveSelectedKst);
+  const effectiveSelectedReport = reportOptions.some((report) => report.id === selectedReport)
     ? selectedReport
-    : REPORT_OPTIONS[effectiveSelectedKst][0];
+    : reportOptions[0]?.id ?? "";
+  const selectedReportDefinition = findReportDefinition(effectiveSelectedKst, effectiveSelectedReport);
   const selectedKstLabel = REPORT_KST_LABELS[effectiveSelectedKst];
 
   React.useEffect(() => {
@@ -425,16 +398,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </Sidebar>
 
       {isReportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4 py-8 backdrop-blur-[3px] overflow-hidden">
-          <div className="w-full max-w-[675px] max-h-[calc(100vh-64px)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/20 px-4 py-8 backdrop-blur-[3px]">
+          <div className="flex max-h-[calc(100vh-64px)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-              <div>
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
+              <div className="min-w-0">
                 <h2 className="text-[18px] font-bold text-gray-900">
                   Unduh Laporan
                 </h2>
                 <p className="text-[13px] text-gray-400 mt-0.5">
-                  Pilih KST, cabang, periode, dan format file laporan.
+                  Pilih KST, cabang, dan format file laporan.
                 </p>
               </div>
 
@@ -449,18 +422,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {/* Body scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
               {/* Preview */}
-              <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
-                <div className="text-[14px] font-bold text-gray-700">
-                  {selectedKstLabel} / {selectedReport}
-                </div>
+              <div className="mb-5 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3.5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase text-emerald-700">
+                      Laporan terpilih
+                    </p>
+                    <p className="mt-0.5 truncate text-[14px] font-bold text-gray-900">
+                      {selectedKstLabel} / {selectedReportDefinition?.label ?? "Laporan"}
+                    </p>
+                  </div>
 
-                <p className="mt-1 text-[13px] text-gray-400">
-                  {selectedMonth} {selectedYear} • Format{" "}
-                  {selectedFormat.toUpperCase()}
-                </p>
+                  <span className="inline-flex w-max items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-[12px] font-bold text-emerald-700">
+                    {selectedFormat === "xlsx" ? "Excel" : "CSV"}
+                  </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-[13px] font-semibold text-gray-600">
                     Pilih KST
@@ -471,18 +450,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     onValueChange={(value) =>
                       handleChangeKst(value as ReportKst)
                     }
-                    >
-                      <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
+                  >
+                    <SelectTrigger className="h-11 rounded-xl border-gray-200 bg-white text-[14px]">
+                      <SelectValue />
+                    </SelectTrigger>
 
-                      <SelectContent>
-                        {allowedReportKsts.map((kst) => (
-                          <SelectItem key={kst} value={kst}>
-                            {REPORT_KST_LABELS[kst]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <SelectContent>
+                      {allowedReportKsts.map((kst) => (
+                        <SelectItem key={kst} value={kst}>
+                          {REPORT_KST_LABELS[kst]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
 
@@ -493,57 +472,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                   <Select
                     value={effectiveSelectedReport}
-                    onValueChange={setSelectedReport}
+                    onValueChange={(value) => {
+                      setSelectedReport(value);
+                      setReportError(null);
+                    }}
                   >
-                    <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
+                    <SelectTrigger className="h-11 rounded-xl border-gray-200 bg-white text-[14px]">
                       <SelectValue />
                     </SelectTrigger>
 
                     <SelectContent>
-                      {REPORT_OPTIONS[effectiveSelectedKst].map((report) => (
-                        <SelectItem key={report} value={report}>
-                          {report}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[13px] font-semibold text-gray-600">
-                    Tahun
-                  </label>
-
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value="2024">2024</SelectItem>
-                      <SelectItem value="2025">2025</SelectItem>
-                      <SelectItem value="2026">2026</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[13px] font-semibold text-gray-600">
-                    Bulan
-                  </label>
-
-                  <Select
-                    value={selectedMonth}
-                    onValueChange={setSelectedMonth}
-                  >
-                    <SelectTrigger className="h-11 border-gray-200 bg-white text-[14px] rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      {MONTH_OPTIONS.map((month) => (
-                        <SelectItem key={month} value={month}>
-                          {month}
+                      {reportOptions.map((report) => (
+                        <SelectItem key={report.id} value={report.id}>
+                          {report.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -555,7 +496,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     Jenis File
                   </label>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {[
                       {
                         value: "csv",
@@ -567,11 +508,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         label: "Excel",
                         icon: FileSpreadsheet,
                       },
-                      {
-                        value: "pdf",
-                        label: "PDF",
-                        icon: FileText,
-                      },
                     ].map((format) => {
                       const Icon = format.icon;
                       const isSelected = selectedFormat === format.value;
@@ -580,11 +516,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <button
                           key={format.value}
                           type="button"
-                          onClick={() =>
-                            setSelectedFormat(format.value as ReportFormat)
-                          }
+                          onClick={() => {
+                            setSelectedFormat(format.value as ReportFormat);
+                            setReportError(null);
+                          }}
                           className={cn(
-                            "flex items-center justify-center gap-2 rounded-xl border px-3 py-3.5 text-[14px] font-semibold transition-colors",
+                            "flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[14px] font-semibold transition-colors",
                             isSelected
                               ? "border-[#27A376] bg-[#E6F6EB] text-[#27A376]"
                               : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -596,25 +533,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       );
                     })}
                   </div>
-
-                  <p className="text-[12px] text-gray-400 leading-relaxed">
-                    Untuk frontend sementara tetap mengunduh CSV dummy. Format
-                    Excel/PDF nanti bisa disambungkan ke backend.
-                  </p>
                 </div>
+
+                {reportError ? (
+                  <div className="sm:col-span-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
+                    {reportError}
+                  </div>
+                ) : null}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-6 py-4 bg-white shrink-0">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-gray-100 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[12px] text-gray-400">
                 Tekan ESC atau klik batal untuk menutup.
               </p>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsReportModalOpen(false)}
+                  disabled={isGeneratingReport}
                   className="h-10 px-5 text-[14px] rounded-xl"
                 >
                   Batal
@@ -622,10 +561,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                 <Button
                   onClick={handleDownloadReport}
+                  disabled={isGeneratingReport || !selectedReportDefinition}
                   className="h-10 px-5 gap-2 bg-[#27A376] hover:bg-[#1f8a63] text-white text-[14px] rounded-xl"
                 >
-                  <Download className="size-4" />
-                  Unduh
+                  {isGeneratingReport ? (
+                    <LoadingIndicator label="Menyiapkan" className="text-white" iconClassName="text-white" />
+                  ) : (
+                    <>
+                      <Download className="size-4" />
+                      Unduh
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
