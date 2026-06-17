@@ -1,18 +1,5 @@
 import { useState } from "react";
-import {
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -21,10 +8,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { Boxes, CalendarDays, Leaf, Ruler } from "lucide-react";
 import { usePageData } from "@/api/hooks";
+import { API_ENDPOINTS } from "@/api/endpoints";
 import { getJatikertoDataMessage } from "../dataState";
-import { numberValue, rowIdentity, textValue, type JatikertoApiRow } from "../rowMappers";
+import {
+  fieldAliases,
+  formatDescription,
+  getNumberValue,
+  getTextValue,
+  rowIdentity,
+  type JatikertoApiRow,
+} from "../rowMappers";
+import { JatikertoTableLayout } from "../JatikertoTableLayout";
+import {
+  badgeSoftGreenClass,
+  formatArea,
+  formatFrequency,
+  formatNumber,
+  formatQuantity,
+  getFrequencyValue,
+  getLastUpdated,
+  getNumericValue,
+  JatikertoEmptyState,
+  JatikertoHero,
+  JatikertoPagination,
+  JatikertoSummaryCards,
+  JatikertoTableSkeleton,
+  matchesFields,
+  mutedBadgeClass,
+  tableHeadClass,
+  tableHeaderClass,
+  tableRowClass,
+} from "../dashboardUi";
 
 interface KomoditasRow extends JatikertoApiRow {
   id?: string;
@@ -38,134 +54,35 @@ interface KomoditasRow extends JatikertoApiRow {
   keterangan: string;
 }
 
-export const tableData: KomoditasRow[] = [
-  {
-    no: 1,
-    nama: "Melon – Golden Aroma yang dipetik khusus",
-    proyeksiPanen: 1500,
-    satuan: "Kg",
-    luasUsaha: "500 m²",
-    masaTanamBulan: 3,
-    masaTanamTahun: "4 Kali",
-    keterangan: "Keterangan",
-  },
-  {
-    no: 2,
-    nama: "Apple – Fuji",
-    proyeksiPanen: 1200,
-    satuan: "Kg",
-    luasUsaha: "600 m²",
-    masaTanamBulan: 5,
-    masaTanamTahun: "3 Kali",
-    keterangan: "Segar dan renyah",
-  },
-  {
-    no: 3,
-    nama: "Banana – Cavendish",
-    proyeksiPanen: 1800,
-    satuan: "Kg",
-    luasUsaha: "700 m²",
-    masaTanamBulan: 4,
-    masaTanamTahun: "5 Kali",
-    keterangan: "Manis dan lembut",
-  },
-  {
-    no: 4,
-    nama: "Orange – Valencia",
-    proyeksiPanen: 1400,
-    satuan: "Kg",
-    luasUsaha: "550 m²",
-    masaTanamBulan: 3,
-    masaTanamTahun: "4 Kali",
-    keterangan: "Asam segar",
-  },
-  {
-    no: 5,
-    nama: "Grapes – Red Globe",
-    proyeksiPanen: 1000,
-    satuan: "Kg",
-    luasUsaha: "450 m²",
-    masaTanamBulan: 6,
-    masaTanamTahun: "3 Kali",
-    keterangan: "Manis berair",
-  },
-  {
-    no: 6,
-    nama: "Papaya – Sunrise",
-    proyeksiPanen: 1300,
-    satuan: "Kg",
-    luasUsaha: "480 m²",
-    masaTanamBulan: 4,
-    masaTanamTahun: "4 Kali",
-    keterangan: "Warna cerah",
-  },
-  {
-    no: 7,
-    nama: "Pineapple – Queen",
-    proyeksiPanen: 1600,
-    satuan: "Kg",
-    luasUsaha: "650 m²",
-    masaTanamBulan: 5,
-    masaTanamTahun: "5 Kali",
-    keterangan: "Aroma tajam",
-  },
-  {
-    no: 8,
-    nama: "Strawberry – Albion",
-    proyeksiPanen: 900,
-    satuan: "Kg",
-    luasUsaha: "300 m²",
-    masaTanamBulan: 7,
-    masaTanamTahun: "6 Kali",
-    keterangan: "Manis pekat",
-  },
-  {
-    no: 9,
-    nama: "Watermelon – Crimson Sweet",
-    proyeksiPanen: 2000,
-    satuan: "Kg",
-    luasUsaha: "800 m²",
-    masaTanamBulan: 3,
-    masaTanamTahun: "4 Kali",
-    keterangan: "Daging merah segar",
-  },
-  {
-    no: 10,
-    nama: "Mango – Alphonso",
-    proyeksiPanen: 1100,
-    satuan: "Kg",
-    luasUsaha: "520 m²",
-    masaTanamBulan: 4,
-    masaTanamTahun: "3 Kali",
-    keterangan: "Manis harum",
-  },
-];
-
-const months = ["Semua Bulan", "Januari", "Februari", "Maret", "April"];
-
 function getRowKey(row: KomoditasRow, index: number) {
   return rowIdentity(row) ?? `${row.nama}-${index}`;
 }
 
 function mapKomoditasRow(row: KomoditasRow): KomoditasRow {
-  if (!row.colValues) return row;
+  const luasUsaha = getNumberValue(row, 1, ["luasUsaha", "luas_usaha", "luas", "area"], Number.NaN);
+  const masaTanamTahun = getNumberValue(row, 3, ["masaTanamTahun", "masa_tanam_tahun", "perTahun", "per_tahun"], Number.NaN);
 
   return {
     ...row,
     id: row.rowId ?? row.id,
-    nama: textValue(row, 0),
-    luasUsaha: `${numberValue(row, 1).toLocaleString("id-ID")} m2`,
-    masaTanamBulan: numberValue(row, 2),
-    masaTanamTahun: `${numberValue(row, 3)} Kali`,
-    proyeksiPanen: numberValue(row, 4),
-    satuan: textValue(row, 5),
-    keterangan: textValue(row, 6, "-"),
+    nama: getTextValue(row, 0, fieldAliases.nama, row.nama),
+    luasUsaha: Number.isFinite(luasUsaha) ? `${luasUsaha} m²` : row.luasUsaha,
+    masaTanamBulan: getNumberValue(row, 2, ["masaTanamBulan", "masa_tanam_bulan", "bulan"], row.masaTanamBulan),
+    masaTanamTahun: Number.isFinite(masaTanamTahun) ? `${masaTanamTahun} Kali` : row.masaTanamTahun,
+    proyeksiPanen: getNumberValue(row, 4, ["proyeksiPanen", "proyeksi_panen", "panen", ...fieldAliases.jumlah], row.proyeksiPanen),
+    satuan: getTextValue(row, 5, ["satuan", "unit"], row.satuan),
+    keterangan: getTextValue(row, 6, ["keterangan", "description", "catatan"], row.keterangan ?? "-"),
   };
 }
 
+function rowMatchesPertanianSearch(row: KomoditasRow, searchQuery: string) {
+  return matchesFields([row.nama, row.satuan, row.luasUsaha, row.keterangan], searchQuery);
+}
+
 export default function Pertanian() {
-  const [selectedYear, setSelectedYear] = useState("2026");
-  const [selectedMonth, setSelectedMonth] = useState("Semua Bulan");
+  const [selectedYear] = useState("2026");
+  const [selectedMonth] = useState("Semua Bulan");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
   const {
@@ -173,255 +90,147 @@ export default function Pertanian() {
     isLoading,
     error,
     errorStatus,
-  } = usePageData<KomoditasRow>("/kst/jatikerto/data/pertanian/items", {
+  } = usePageData<KomoditasRow>(API_ENDPOINTS.kst.jatikerto.pertanianItems, {
     year: selectedYear,
     month: selectedMonth,
     limit: 50,
   });
 
+  const mappedData = tableData.map(mapKomoditasRow);
+  const displayData = mappedData.filter((row) => rowMatchesPertanianSearch(row, searchQuery));
   const rowsPerPageNumber = Number(rowsPerPage);
-  const totalPages = Math.max(
-    1,
-    Math.ceil(tableData.length / rowsPerPageNumber)
-  );
+  const totalPages = Math.max(1, Math.ceil(displayData.length / rowsPerPageNumber));
+  const totalPanen = mappedData.reduce((sum, row) => sum + Number(row.proyeksiPanen || 0), 0);
+  const totalLuas = mappedData.reduce((sum, row) => sum + getNumericValue(row.luasUsaha), 0);
+  const totalFrekuensi = mappedData.reduce((sum, row) => sum + getFrequencyValue(row.masaTanamTahun), 0);
+  const lastUpdated = getLastUpdated(mappedData);
+  const summaryCards = [
+    { label: "Total Komoditas", value: formatNumber(mappedData.length), icon: Leaf },
+    { label: "Total Proyeksi Panen", value: formatQuantity(totalPanen, mappedData[0]?.satuan || "Kg"), icon: Boxes },
+    { label: "Total Luas Usaha", value: formatArea(totalLuas), icon: Ruler },
+    { label: "Frekuensi Panen / Tahun", value: formatFrequency(totalFrekuensi), icon: CalendarDays },
+  ];
 
-  const paginatedData = tableData.slice(
+  const paginatedData = displayData.slice(
     (currentPage - 1) * rowsPerPageNumber,
-    currentPage * rowsPerPageNumber
-  ).map(mapKomoditasRow);
+    currentPage * rowsPerPageNumber,
+  );
   const tableMessage = getJatikertoDataMessage({
     isLoading,
     error,
     errorStatus,
-    hasItems: tableData.length > 0,
+    hasItems: displayData.length > 0,
   });
 
   return (
-    <div className="flex flex-col gap-5 p-4 md:p-6 bg-gray-50/50 min-h-screen">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="h-9 border-gray-200 bg-white text-[13px] font-medium">
-            <SelectValue />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value="2024">2024</SelectItem>
-            <SelectItem value="2025">2025</SelectItem>
-            <SelectItem value="2026">2026</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <div className="w-full sm:w-auto overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm w-max">
-            {months.map((month) => (
-              <button
-                key={month}
-                onClick={() => setSelectedMonth(month)}
-                className={cn(
-                  "px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-150 whitespace-nowrap",
-                  selectedMonth === month
-                    ? "bg-gray-900 text-white shadow-sm"
-                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                )}
-              >
-                {month}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <JatikertoTableLayout
+      categoryName="Pertanian"
+      subtitle="Proyeksi Panen Komoditas Pertanian"
+      searchValue={searchQuery}
+      searchPlaceholder="Cari komoditas..."
+      headerContent={
+        <JatikertoHero
+          title="Dashboard Pertanian"
+          description="Proyeksi Panen Komoditas Pertanian dan pengelolaan produksi agro KST Jatikerto."
+          badges={["Pertanian Agroindustri"]}
+          lastUpdated={lastUpdated}
+          metric={{ label: "Total Proyeksi Panen", value: formatQuantity(totalPanen, mappedData[0]?.satuan || "Kg") }}
+        />
+      }
+      beforeTable={<JatikertoSummaryCards items={summaryCards} />}
+      onSearchChange={(value) => {
+        setSearchQuery(value);
+        setCurrentPage(1);
+      }}
+    >
+      <>
         <div className="overflow-x-auto">
-          <Table className="min-w-[1050px]">
+          <Table className="min-w-[900px] table-fixed">
             <TableHeader>
-              <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] w-[50px] text-center px-0"
-                  rowSpan={2}
-                >
+              <TableRow className={tableHeaderClass}>
+                <TableHead className={`${tableHeadClass} w-[56px] text-center`}>
                   No.
                 </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] min-w-[200px]"
-                  rowSpan={2}
-                >
-                  Nama Komoditas
+                <TableHead className={`${tableHeadClass} w-[24%]`}>
+                  Komoditas
                 </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] min-w-[130px] text-center px-0"
-                  rowSpan={2}
-                >
+                <TableHead className={`${tableHeadClass} w-[16%] text-center`}>
                   Proyeksi Panen
                 </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] min-w-[90px] text-center px-0"
-                  rowSpan={2}
-                >
-                  Satuan
-                </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] min-w-[120px] text-center px-0"
-                  rowSpan={2}
-                >
+                <TableHead className={`${tableHeadClass} w-[14%] text-center`}>
                   Luas Usaha
                 </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] text-center border-b-0 min-w-[220px] px-0"
-                  colSpan={2}
-                >
-                  <div className="w-full text-center">Masa Tanam</div>
-
-                  <div className="grid grid-cols-2 mt-1 w-full">
-                    <span className="text-center text-[10px] font-semibold text-gray-400">
-                      Satuan Bulan
-                    </span>
-                    <span className="text-center text-[10px] font-semibold text-gray-400">
-                      Per-Tahun
-                    </span>
-                  </div>
+                <TableHead className={`${tableHeadClass} w-[24%] text-center`}>
+                  Masa Tanam
                 </TableHead>
-
-                <TableHead
-                  className="font-bold text-gray-500 text-[12px] min-w-[220px]"
-                  rowSpan={2}
-                >
+                <TableHead className={`${tableHeadClass} w-[22%]`}>
                   Keterangan
                 </TableHead>
-
-                <TableHead className="w-[48px]" rowSpan={2} />
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {tableMessage ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-0">
+                    <JatikertoTableSkeleton columns={6} />
+                  </TableCell>
+                </TableRow>
+              ) : tableMessage ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
-                    className="h-32 text-center text-[13px] text-gray-400 font-medium"
+                    colSpan={6}
+                    className="p-5"
                   >
-                    {tableMessage}
+                    <JatikertoEmptyState title={tableMessage} />
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((row, index) => (
-                <TableRow key={getRowKey(row, index)} className="hover:bg-gray-50/50 group">
-                  <TableCell className="text-[13px] text-gray-500 font-medium text-center px-0">
-                    {(currentPage - 1) * rowsPerPageNumber + index + 1}.
-                  </TableCell>
-
-                  <TableCell className="text-[13px] font-medium text-gray-900 max-w-[200px] whitespace-normal break-words leading-relaxed">
-                    {row.nama}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-600 font-medium text-center whitespace-nowrap tabular-nums px-0">
-                    {row.proyeksiPanen}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-500 text-center whitespace-nowrap px-0">
-                    {row.satuan}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-600 text-center whitespace-nowrap tabular-nums px-0">
-                    {row.luasUsaha}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-600 text-center whitespace-nowrap tabular-nums w-[110px] px-0">
-                    {row.masaTanamBulan}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-600 text-center whitespace-nowrap w-[110px] px-0">
-                    {row.masaTanamTahun}
-                  </TableCell>
-
-                  <TableCell className="text-[13px] text-gray-600 max-w-[220px] whitespace-normal break-words leading-relaxed">
-                    {row.keterangan}
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-100">
-                      <MoreVertical className="size-4 text-gray-400" />
-                    </button>
-                  </TableCell>
-                </TableRow>
+                  <TableRow key={getRowKey(row, index)} className={tableRowClass}>
+                    <TableCell className="text-center text-[13px] font-medium text-gray-500">
+                      {(currentPage - 1) * rowsPerPageNumber + index + 1}.
+                    </TableCell>
+                    <TableCell className="max-w-[220px] whitespace-normal break-words text-[13px] font-semibold leading-relaxed text-gray-900">
+                      {row.nama || "Belum tersedia"}
+                    </TableCell>
+                    <TableCell className="text-center text-[13px] font-medium text-gray-700 tabular-nums">
+                      {formatQuantity(row.proyeksiPanen, row.satuan)}
+                    </TableCell>
+                    <TableCell className="text-center text-[13px] text-gray-600 tabular-nums">
+                      {formatArea(row.luasUsaha)}
+                    </TableCell>
+                    <TableCell className="min-w-[250px]">
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Badge className={mutedBadgeClass}>
+                          {formatNumber(row.masaTanamBulan)} Bulan
+                        </Badge>
+                        <Badge className={badgeSoftGreenClass}>
+                          {formatFrequency(row.masaTanamTahun)}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[280px] whitespace-normal break-words text-[13px] leading-relaxed text-gray-600">
+                      <p className="line-clamp-3 break-words">{formatDescription(row.keterangan)}</p>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-[13px] text-gray-500 font-medium">
-            <span className="whitespace-nowrap">Baris per Page</span>
-
-            <Select
-              value={rowsPerPage}
-              onValueChange={(value) => {
-                setRowsPerPage(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px] border-gray-200 bg-white text-[13px]">
-                <SelectValue />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-[13px] text-gray-500 font-medium whitespace-nowrap">
-              Page {currentPage} dari {totalPages}
-            </span>
-
-            <div className="flex items-center gap-1">
-              {[
-                {
-                  icon: ChevronsLeft,
-                  action: () => setCurrentPage(1),
-                  disabled: currentPage === 1,
-                },
-                {
-                  icon: ChevronLeft,
-                  action: () =>
-                    setCurrentPage(Math.max(1, currentPage - 1)),
-                  disabled: currentPage === 1,
-                },
-                {
-                  icon: ChevronRight,
-                  action: () =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1)),
-                  disabled: currentPage === totalPages,
-                },
-                {
-                  icon: ChevronsRight,
-                  action: () => setCurrentPage(totalPages),
-                  disabled: currentPage === totalPages,
-                },
-              ].map((btn, i) => (
-                <button
-                  key={i}
-                  onClick={btn.action}
-                  disabled={btn.disabled}
-                  className="p-1.5 rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <btn.icon className="size-4" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <JatikertoPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(value) => {
+            setRowsPerPage(value);
+            setCurrentPage(1);
+          }}
+          onPageChange={setCurrentPage}
+        />
+      </>
+    </JatikertoTableLayout>
   );
 }

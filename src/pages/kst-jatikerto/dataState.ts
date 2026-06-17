@@ -4,11 +4,11 @@ export function getJatikertoDataMessage(input: {
   errorStatus?: number | null;
   hasItems: boolean;
 }) {
-  if (input.isLoading) return "Memuat data...";
-  if (input.errorStatus === 403) return "Anda tidak memiliki akses";
-  if (input.errorStatus === 404) return "Endpoint data tidak ditemukan";
-  if (input.errorStatus === 503) return "Backend Jatikerto belum tersedia";
-  if (input.error) return input.error;
+  if (input.isLoading) return null;
+  if (input.errorStatus === 403) return "Anda tidak memiliki akses untuk melihat data ini.";
+  if (input.errorStatus === 404) return "Data belum tersedia";
+  if (input.errorStatus === 503) return "Data sedang disiapkan";
+  if (input.error) return "Data sedang disiapkan";
   if (!input.hasItems) return "Data belum tersedia";
   return null;
 }

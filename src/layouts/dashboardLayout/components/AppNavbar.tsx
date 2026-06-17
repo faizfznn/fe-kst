@@ -17,8 +17,8 @@ export function AppNavbar() {
         return { title: "Beranda" };
       case ROUTES.KELOLA_AKUN:
         return { title: "Kelola Akun" };
-      case ROUTES.TRACKER_INOVASI:
-        return { parent: "KST Ngijo", title: "Tracker Inovasi" };
+      case ROUTES.PENELITIAN:
+        return { parent: "KST Ngijo", title: "Penelitian" };
       case ROUTES.KEBERLANJUTAN:
         return { parent: "KST Ngijo", title: "Keberlanjutan" };
       case ROUTES.PRODUKSI:
@@ -26,7 +26,9 @@ export function AppNavbar() {
       case ROUTES.STOK_OPNAME:
         return { parent: "KST Cangar", title: "Stok Opname" };
       case ROUTES.BOOKLIST_ATP:
-        return { parent: "KST Cangar", title: "Booklist ATP" };
+        return { parent: "KST Cangar", title: "Manajemen Booking" };
+      case ROUTES.KEUANGAN_CANGAR:
+        return { parent: "KST Cangar", title: "Manajemen Keuangan" };
       case ROUTES.PERTANIAN:
         return { parent: "KST Jatikerto", title: "Pertanian" };
       case ROUTES.PETERNAKAN:

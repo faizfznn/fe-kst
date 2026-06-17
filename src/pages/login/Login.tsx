@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import banner from "@/assets/logo.png";
 
@@ -137,7 +138,7 @@ export default function Login() {
                 className="w-full bg-black text-white hover:bg-gray-800 mt-6"
                 disabled={isLoading || !formData.email.trim() || !formData.password.trim()}
               >
-                {isLoading ? "Sedang masuk..." : "Masuk"}
+                {isLoading ? <LoadingIndicator label="Sedang masuk" className="text-white" iconClassName="text-white" /> : "Masuk"}
               </Button>
             </form>
 

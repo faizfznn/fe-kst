@@ -9,27 +9,67 @@ interface PageContainer<T> {
   items: T[];
 }
 
-interface DataContainer<T> {
-  data?: PageContainer<T>;
+type PagePayload<T> = PageContainer<T> | T[] | unknown;
+
+function asRecord(payload: unknown): Record<string, unknown> | null {
+  return payload && typeof payload === "object" && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)
+    : null;
 }
 
-type PagePayload<T> = PageContainer<T> | DataContainer<T>;
+function parseJsonValue(payload: unknown): unknown {
+  if (typeof payload !== "string") return payload;
 
-function hasItems<T>(payload: unknown): payload is PageContainer<T> {
-  return Boolean(
-    payload &&
-      typeof payload === "object" &&
-      Array.isArray((payload as PageContainer<T>).items),
-  );
+  try {
+    return JSON.parse(payload) as unknown;
+  } catch {
+    return payload;
+  }
+}
+
+function pageFromArray<T>(items: T[]): PageContainer<T> {
+  return {
+    offset: 0,
+    limit: items.length,
+    hasNext: false,
+    total: items.length,
+    items,
+  };
+}
+
+function findPageContainer<T>(payload: unknown, depth = 0): PageContainer<T> | null {
+  if (depth > 5) return null;
+
+  const parsed = parseJsonValue(payload);
+  if (parsed !== payload) return findPageContainer<T>(parsed, depth + 1);
+
+  if (Array.isArray(payload)) {
+    return pageFromArray(payload as T[]);
+  }
+
+  const record = asRecord(payload);
+  if (!record) return null;
+
+  if (Array.isArray(record.items)) {
+    return pageFromArray(record.items as T[]);
+  }
+
+  for (const key of ["data", "response"]) {
+    if (key in record) {
+      const nested = findPageContainer<T>(record[key], depth + 1);
+      if (nested) return nested;
+    }
+  }
+
+  const value = parseJsonValue(record.value);
+  if (Array.isArray(value)) return pageFromArray(value as T[]);
+  if (asRecord(value)) return findPageContainer<T>(value, depth + 1);
+
+  return null;
 }
 
 export function parsePageContainer<T>(payload: PagePayload<T> | null): PageContainer<T> | null {
-  const nestedData =
-    payload && typeof payload === "object" && "data" in payload ? payload.data : null;
-
-  if (hasItems<T>(nestedData)) return nestedData;
-  if (hasItems<T>(payload)) return payload;
-  return null;
+  return findPageContainer<T>(payload);
 }
 
 export function useApiData<T>(
@@ -77,12 +117,37 @@ export function useApiData<T>(
 export function usePageData<T>(path: string, query?: Record<string, unknown>) {
   const { data, isLoading, error, errorStatus } = useApiData<PagePayload<T>>(path, query);
   const page = parsePageContainer<T>(data);
+  const parseError =
+    !isLoading && !error && data !== null && !page
+      ? "Format response tidak dikenali"
+      : null;
 
   return {
     items: page?.items ?? ([] as T[]),
     page,
+    warning: extractWarning(data),
     isLoading,
-    error,
+    error: error ?? parseError,
     errorStatus,
   };
+}
+
+/**
+ * Pulls an upstream `warning` string out of a gateway envelope. The gateway
+ * returns HTTP 200 with `{ data: {...}, warning }` when an upstream KST is
+ * unavailable, so this lets a page tell "upstream is down" apart from
+ * "upstream returned no rows".
+ */
+function extractWarning(payload: unknown, depth = 0): string | null {
+  if (depth > 5) return null;
+  const record = asRecord(payload);
+  if (!record) return null;
+  if (typeof record.warning === "string" && record.warning.trim()) return record.warning;
+  for (const key of ["data", "response"]) {
+    if (key in record) {
+      const nested = extractWarning(record[key], depth + 1);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }

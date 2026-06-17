@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import {
   Select,
   SelectContent,
@@ -361,7 +362,7 @@ export default function Register() {
                 className="w-full bg-black text-white hover:bg-gray-800 mt-6"
                 disabled={isLoading}
               >
-                {isLoading ? "Sedang membuat akun..." : "Daftar"}
+                {isLoading ? <LoadingIndicator label="Sedang membuat akun" className="text-white" iconClassName="text-white" /> : "Daftar"}
               </Button>
             </form>
 

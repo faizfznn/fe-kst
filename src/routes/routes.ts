@@ -9,11 +9,12 @@ export const ROUTES = {
 
   DASHBOARD: '/dashboard',
   KELOLA_AKUN: '/kelola-akun',
-  TRACKER_INOVASI: '/tracker-inovasi',
+  PENELITIAN: '/penelitian',
   KEBERLANJUTAN: '/keberlanjutan',
   PRODUKSI: '/produksi',
   STOK_OPNAME: '/stok-opname',
   BOOKLIST_ATP: '/booklist-atp',
+  KEUANGAN_CANGAR: '/keuangan-cangar',
   PERTANIAN: '/pertanian',
   PETERNAKAN: '/peternakan',
   KONSERVASI: '/konservasi',

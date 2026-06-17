@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import type { KstIdentifier, Role } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -18,7 +19,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <LoadingIndicator label="Memuat sesi" />
       </div>
     );
   }

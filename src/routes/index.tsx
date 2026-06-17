@@ -15,6 +15,7 @@ import KelolaAkun from "@/pages/dashboard/KelolaAkun";
 
 // KST CANGAR
 import BooklistAtp from "@/pages/kst-cangar/booklistAtp/BooklistAtp";
+import KeuanganCangar from "@/pages/kst-cangar/keuangan/KeuanganCangar";
 import StokOpname from "@/pages/kst-cangar/stopOpname/StokOpname";
 
 // KST JATIKERTO
@@ -27,7 +28,7 @@ import Peternakan from "@/pages/kst-jatikerto/peternakan/Peternakan";
 
 // KST NGIJO
 import Keberlanjutan from "@/pages/kst-ngijo/keberlanjutan/Keberlanjutan";
-import TrackerInovasi from "@/pages/kst-ngijo/trackerInovasi/TrackerInovasi";
+import Penelitian from "@/pages/kst-ngijo/penelitian/Penelitian";
 
 // // Helper component for pages that aren't created yet
 // const DummyPage = ({ title }: { title: string }) => (
@@ -80,6 +81,14 @@ export const AppRoutes = () => {
               element={
                 <ProtectedRoute allowedKst="cangar">
                   <StokOpname />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.KEUANGAN_CANGAR.substring(1)}
+              element={
+                <ProtectedRoute allowedKst="cangar">
+                  <KeuanganCangar />
                 </ProtectedRoute>
               }
             />
@@ -136,10 +145,10 @@ export const AppRoutes = () => {
               }
             />
             <Route
-              path={ROUTES.TRACKER_INOVASI.substring(1)}
+              path={ROUTES.PENELITIAN.substring(1)}
               element={
                 <ProtectedRoute allowedKst="ngijo">
-                  <TrackerInovasi />
+                  <Penelitian />
                 </ProtectedRoute>
               }
             />

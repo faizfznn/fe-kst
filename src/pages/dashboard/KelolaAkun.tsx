@@ -34,10 +34,9 @@ interface UserRow {
   no: number;
   name: string;
   email: string;
-  role: "Administrator" | "Manajer" | "Staff";
+  role: "Administrator" | "Manajemen" | "Operator";
   isCurrentUser?: boolean;
   tanggalDaftar: string;
-  hakAkses: "Administrator" | "Editor" | "Viewer";
   status: "Aktif" | "Nonaktif";
   userId?: string;
   kstIdentifier?: string | null;
@@ -79,70 +78,62 @@ export const userData: UserRow[] = [
     role: "Administrator",
     isCurrentUser: true,
     tanggalDaftar: "3/5/2026",
-    hakAkses: "Administrator",
     status: "Aktif",
   },
   {
     no: 2,
     name: "Manajer Proyek",
     email: "budi.santoso@perusahaan.com",
-    role: "Administrator",
+    role: "Manajemen",
     tanggalDaftar: "15/8/2025",
-    hakAkses: "Administrator",
     status: "Aktif",
   },
   {
     no: 3,
     name: "Tim Keuangan",
     email: "sari.dewi@perusahaan.com",
-    role: "Administrator",
+    role: "Manajemen",
     tanggalDaftar: "1/12/2024",
-    hakAkses: "Administrator",
     status: "Aktif",
   },
   {
     no: 4,
     name: "Tim Pengembangan",
     email: "rizky.pratama@perusahaan.com",
-    role: "Administrator",
+    role: "Manajemen",
     tanggalDaftar: "22/3/2026",
-    hakAkses: "Administrator",
     status: "Aktif",
   },
   {
     no: 5,
     name: "Support Pelanggan",
     email: "dewi.lestari@perusahaan.com",
-    role: "Administrator",
+    role: "Manajemen",
     tanggalDaftar: "10/1/2027",
-    hakAkses: "Administrator",
     status: "Aktif",
   },
   {
     no: 6,
     name: "Operator KST Ngijo",
     email: "operator.ngijo@perusahaan.com",
-    role: "Staff",
+    role: "Operator",
     tanggalDaftar: "12/2/2026",
-    hakAkses: "Editor",
     status: "Aktif",
   },
   {
     no: 7,
     name: "Operator KST Cangar",
     email: "operator.cangar@perusahaan.com",
-    role: "Staff",
+    role: "Operator",
     tanggalDaftar: "19/2/2026",
-    hakAkses: "Editor",
     status: "Aktif",
   },
   {
     no: 8,
     name: "Operator KST Jatikerto",
     email: "operator.jatikerto@perusahaan.com",
-    role: "Staff",
+    role: "Operator",
     tanggalDaftar: "25/2/2026",
-    hakAkses: "Viewer",
     status: "Nonaktif",
   },
 ];
@@ -152,7 +143,7 @@ function getRoleBadgeClass(role: UserRow["role"]) {
     return "bg-[#E6F6EB] text-[#30A46C] border-[#CDEFD8]";
   }
 
-  if (role === "Manajer") {
+  if (role === "Manajemen") {
     return "bg-blue-50 text-blue-600 border-blue-100";
   }
 
@@ -196,14 +187,8 @@ export default function KelolaAkun() {
           primaryRole?.role === "super_admin"
             ? "Administrator"
             : primaryRole?.role === "manajemen"
-              ? "Manajer"
-              : "Staff";
-        const hakAkses =
-          primaryRole?.role === "super_admin"
-            ? "Administrator"
-            : primaryRole?.role === "operator"
-              ? "Editor"
-              : "Viewer";
+              ? "Manajemen"
+              : "Operator";
 
         return {
           no: index + 1,
@@ -212,7 +197,6 @@ export default function KelolaAkun() {
           email: user.email,
           role,
           tanggalDaftar: new Date(user.createdAt).toLocaleDateString("id-ID"),
-          hakAkses,
           status: user.status === "active" ? "Aktif" : "Nonaktif",
           kstIdentifier: primaryRole?.kstIdentifier,
         };
@@ -247,33 +231,6 @@ export default function KelolaAkun() {
     (currentPage - 1) * rowsPerPageNumber,
     currentPage * rowsPerPageNumber
   );
-
-  const handleChangeAccess = async (userNo: number, value: UserRow["hakAkses"]) => {
-    const target = users.find((user) => user.no === userNo);
-    if (!target?.userId) return;
-
-    const role =
-      value === "Administrator"
-        ? "super_admin"
-        : value === "Editor"
-          ? "operator"
-          : "manajemen";
-
-    await apiClient.patch(`/users/${target.userId}/roles`, {
-      roles: [
-        {
-          role,
-          kstIdentifier: role === "operator" ? target.kstIdentifier ?? "ngijo" : null,
-          isActive: true,
-        },
-      ],
-    });
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.no === userNo ? { ...user, hakAkses: value } : user
-      )
-    );
-  };
 
   const openDeleteModal = (user: UserRow) => {
     setUserToDelete(user);
@@ -490,7 +447,7 @@ export default function KelolaAkun() {
         ) : (
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="min-w-[1050px]">
+            <Table className="min-w-[880px]">
               <TableHeader>
                 <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
                   <TableHead className="font-bold text-gray-500 text-[12px] w-[55px] text-center">
@@ -507,10 +464,6 @@ export default function KelolaAkun() {
 
                   <TableHead className="font-bold text-gray-500 text-[12px] min-w-[150px] text-center">
                     Tanggal daftar
-                  </TableHead>
-
-                  <TableHead className="font-bold text-gray-500 text-[12px] min-w-[180px] text-center">
-                    Hak akses
                   </TableHead>
 
                   <TableHead className="w-[60px]" />
@@ -567,30 +520,6 @@ export default function KelolaAkun() {
 
                       <TableCell className="text-[13px] text-gray-600 font-medium text-center whitespace-nowrap">
                         {user.tanggalDaftar}
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <Select
-                          value={user.hakAkses}
-                          onValueChange={(value) =>
-                            handleChangeAccess(
-                              user.no,
-                              value as UserRow["hakAkses"]
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-[130px] mx-auto border-gray-200 bg-white text-[12px] font-semibold">
-                            <SelectValue />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            <SelectItem value="Administrator">
-                              Administrator
-                            </SelectItem>
-                            <SelectItem value="Editor">Editor</SelectItem>
-                            <SelectItem value="Viewer">Viewer</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </TableCell>
 
                       <TableCell className="text-center">

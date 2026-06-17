@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Handshake,
   Users,
+  Banknote,
 } from "lucide-react";
 
 import {
@@ -78,10 +79,10 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
           <>
             <CommandGroup heading="KST Ngijo">
               <CommandItem
-                onSelect={() => runCommand(() => navigate(ROUTES.TRACKER_INOVASI))}
+                onSelect={() => runCommand(() => navigate(ROUTES.PENELITIAN))}
               >
                 <Activity className="mr-2 h-4 w-4" />
-                <span>Tracker Inovasi</span>
+                <span>Penelitian</span>
               </CommandItem>
               <CommandItem
                 onSelect={() => runCommand(() => navigate(ROUTES.KEBERLANJUTAN))}
@@ -145,7 +146,13 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
                 onSelect={() => runCommand(() => navigate(ROUTES.BOOKLIST_ATP))}
               >
                 <Book className="mr-2 h-4 w-4" />
-                <span>Booklist ATP</span>
+                <span>Manajemen Booking</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate(ROUTES.KEUANGAN_CANGAR))}
+              >
+                <Banknote className="mr-2 h-4 w-4" />
+                <span>Keuangan</span>
               </CommandItem>
             </CommandGroup>
             <CommandSeparator />
