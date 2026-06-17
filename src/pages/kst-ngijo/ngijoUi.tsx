@@ -34,7 +34,6 @@ export function NgijoHero({
   title,
   description,
   badges = [],
-  metric,
 }: {
   title: string;
   description: string;
@@ -45,7 +44,7 @@ export function NgijoHero({
     <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
       <div className="relative px-5 py-6 md:px-7">
         <div className="absolute inset-y-0 right-0 hidden w-2/5 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_42%),linear-gradient(to_left,rgba(236,253,245,0.95),transparent)] md:block" />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="relative">
           <div className="max-w-3xl">
             <div className="mb-4 flex flex-wrap gap-2">
               <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -64,14 +63,6 @@ export function NgijoHero({
               {description}
             </p>
           </div>
-          {metric ? (
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-left md:text-right">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                {metric.label}
-              </p>
-              <p className="mt-1 text-2xl font-bold text-gray-950">{metric.value}</p>
-            </div>
-          ) : null}
         </div>
       </div>
     </section>

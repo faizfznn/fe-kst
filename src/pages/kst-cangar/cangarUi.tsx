@@ -26,7 +26,6 @@ export function CangarHero({
   description,
   lastUpdated,
   badges = [],
-  metric,
 }: {
   title: string;
   description: string;
@@ -57,14 +56,7 @@ export function CangarHero({
               {description}
             </p>
           </div>
-          {metric ? (
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-left md:text-right">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                {metric.label}
-              </p>
-              <p className="mt-1 text-2xl font-bold text-gray-950">{metric.value}</p>
-            </div>
-          ) : lastUpdated ? (
+          {lastUpdated ? (
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-left md:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
                 Data dimuat pada

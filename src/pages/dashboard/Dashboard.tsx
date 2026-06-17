@@ -4,12 +4,11 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Boxes,
-  ClipboardList,
   GraduationCap,
   Handshake,
   Leaf,
   Sprout,
-  TrendingUp,
+  Users,
   Zap,
 } from "lucide-react";
 
@@ -85,11 +84,6 @@ function hasValue(value: unknown): value is number {
 function formatNumber(value: number | null | undefined, suffix?: string) {
   if (!hasValue(value)) return EMPTY_TEXT;
   return [value.toLocaleString("id-ID"), suffix].filter(Boolean).join(" ");
-}
-
-function formatPercent(value: number | null | undefined) {
-  if (!hasValue(value)) return EMPTY_TEXT;
-  return `${value.toLocaleString("id-ID")}%`;
 }
 
 function dataStatusText(
@@ -215,20 +209,12 @@ function SectionHeader({
   );
 }
 
-function HeroOverview({
-  kstValue,
-  indicatorValue,
-  focusValue,
-}: {
-  kstValue: ReactNode;
-  indicatorValue: ReactNode;
-  focusValue: ReactNode;
-}) {
+function HeroOverview() {
   return (
     <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
       <div className="relative px-5 py-6 md:px-7">
         <div className="absolute inset-y-0 right-0 hidden w-2/5 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_42%),linear-gradient(to_left,rgba(240,253,244,0.95),transparent)] md:block" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative">
           <div className="max-w-3xl">
             <div className="mb-4 flex flex-wrap gap-2">
               <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -251,23 +237,6 @@ function HeroOverview({
               Ringkasan lintas KST untuk memantau riset, keberlanjutan, operasional,
               agro, dan konservasi dari data yang sudah tersedia.
             </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
-            {[
-              { label: "KST terpantau", value: kstValue },
-              { label: "Indikator tercatat", value: indicatorValue },
-              { label: "Fokus aktif", value: focusValue },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-left lg:text-right"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-2xl font-bold text-gray-950">{item.value}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -870,21 +839,6 @@ export default function Dashboard() {
   const displayActiveResearch = akademikRows.length > 0 ? activeAcademicResearch : null;
   const conservationOrResearchMetric = displayKonservasi ?? displayActiveResearch;
 
-  const mainIndicators = [
-    averageTrl,
-    greenPerformance,
-    renewableEnergy,
-    ngijoPartnershipMetric,
-    displayTotalBooking,
-    displayPendingBooking,
-    displayStockItems,
-    displaySaldo,
-    displayTotalPanen,
-    displayKomoditasAgro,
-    displayPopulasiTernak,
-    conservationOrResearchMetric,
-  ].filter(hasValue).length;
-
   const hasNgijoData = [averageTrl, greenPerformance, renewableEnergy, ngijoPartnershipMetric].some(hasValue);
   const hasCangarData = [displayTotalBooking, displayStockItems, displaySaldo].some(hasValue);
   const hasJatikertoData = [
@@ -908,18 +862,6 @@ export default function Dashboard() {
       konservasiError ||
       akademikError,
   );
-  const isAnyLoading =
-    isSummaryLoading ||
-    isAverageTrlLoading ||
-    isGreenLoading ||
-    isRenewableLoading ||
-    isBookingLoading ||
-    isStockLoading ||
-    isFinanceLoading ||
-    isPertanianLoading ||
-    isPeternakanLoading ||
-    isKonservasiLoading ||
-    isAkademikLoading;
   const ngijoStatusMessage = dataStatusText(
     isAverageTrlLoading || isGreenLoading,
     averageTrlError || greenError,
@@ -956,16 +898,33 @@ export default function Dashboard() {
     : summary.activeKst !== null && summary.totalKst !== null
       ? `${summary.activeKst}/${summary.totalKst}`
       : `${Math.max(integratedKst, directKstCount)}/${KST_KEYS.length}`;
-  const focusAktifValue = `${[hasCangarData, hasJatikertoData].filter(Boolean).length} fokus`;
+  const totalVisitorValue = isSummaryLoading
+    ? <LoadingIndicator />
+    : summary.totalVisitors !== null
+      ? formatNumber(summary.totalVisitors, "pengunjung")
+      : WAITING_TEXT;
+  const todayVisitorDetail =
+    summary.todayVisitors === null
+      ? "Hari ini belum tersedia"
+      : summary.todayVisitors === 0
+        ? "Belum ada pengunjung hari ini"
+        : `Hari ini ${formatNumber(summary.todayVisitors)}`;
+  const weekVisitorDetail =
+    summary.weekVisitors === null
+      ? "Minggu ini belum tersedia"
+      : summary.weekVisitors === 0
+        ? "Belum ada pengunjung minggu ini"
+        : `Minggu ini ${formatNumber(summary.weekVisitors)}`;
+  const visitorDetail = isSummaryLoading
+    ? <LoadingIndicator label="Memuat data" />
+    : summary.todayVisitors !== null || summary.weekVisitors !== null
+      ? `${todayVisitorDetail} - ${weekVisitorDetail}`
+      : "Detail harian/mingguan belum tersedia dari sumber data";
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-6 md:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <HeroOverview
-          kstValue={kstTerpantauValue}
-          indicatorValue={mainIndicators > 0 ? mainIndicators : isAnyLoading ? <LoadingIndicator /> : WAITING_TEXT}
-          focusValue={focusAktifValue}
-        />
+        <HeroOverview />
 
         {hasEndpointError ? (
           <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 shadow-sm">
@@ -997,7 +956,7 @@ export default function Dashboard() {
         ) : null}
 
         <section className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ExecutiveSummaryCard
               label="KST Terpantau"
               value={kstTerpantauValue}
@@ -1006,40 +965,13 @@ export default function Dashboard() {
               featured
             />
             <ExecutiveSummaryCard
-              label="Total Indikator Utama"
-              value={mainIndicators > 0 ? mainIndicators : isAnyLoading ? <LoadingIndicator /> : WAITING_TEXT}
-              description="Highlight yang memiliki data angka"
-              icon={ClipboardList}
+              label="Total Pengunjung"
+              value={totalVisitorValue}
+              description="Akumulasi data pengunjung atau reservasi dari sumber KST yang tersedia."
+              icon={Users}
             >
-              <div className="flex items-center gap-3">
-                {[0, 1, 2, 3].map((item) => (
-                  <span
-                    key={item}
-                    className={`h-5 rounded-full ${item % 2 === 0 ? "w-10 bg-emerald-200" : "w-8 bg-emerald-900"}`}
-                  />
-                ))}
-              </div>
+              <p className="text-xs font-semibold text-emerald-700">{visitorDetail}</p>
             </ExecutiveSummaryCard>
-            <ExecutiveSummaryCard
-              label="Fokus Riset & Keberlanjutan"
-              value={
-                hasNgijoData
-                  ? formatPercent(greenPerformance)
-                  : isAverageTrlLoading || isGreenLoading
-                    ? <LoadingIndicator />
-                    : WAITING_TEXT
-              }
-              description="TRL, green performance, energi, kolaborasi atau paten"
-              icon={Leaf}
-            >
-              <ProgressLine label="Ngijo" value={greenPerformance} tone="emerald" />
-            </ExecutiveSummaryCard>
-            <ExecutiveSummaryCard
-              label="Fokus Agro / Operasional / Konservasi"
-              value={focusAktifValue}
-              description="Booking, stok, saldo, panen, ternak, konservasi"
-              icon={TrendingUp}
-            />
           </div>
         </section>
 
